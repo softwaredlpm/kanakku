@@ -2,7 +2,7 @@
 
 You build one group of BUSY-style "Display" reports for this project. Several builders work at the same time,
 so you may ONLY create/edit the files named in your brief. Do NOT edit `server.py`, `BusyMobileWeb/index.html`,
-`apk_project/`, `voucher_renderers.py`, or anything in `busy_local.db` (open it read-only:
+`voucher_renderers.py`, or anything in `busy_local.db` (open it read-only:
 `sqlite3.connect('file:D:/Busy Mobile App/busy_local.db?mode=ro', uri=True)`). Do NOT start, stop or kill any
 server on ports 3000/80 and do NOT touch BUSY BDS files. The integrator wires your files into the app.
 

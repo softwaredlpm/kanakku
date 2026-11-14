@@ -144,12 +144,6 @@ def _load_app_secret():
 
 SECURITY_SALT = _load_app_secret()
 
-# Optional, private: answers for a locally patched vendor APK (see busy_apk_compat.py; never published).
-try:
-    import busy_apk_compat as APK_COMPAT
-except ImportError:
-    APK_COMPAT = None
-
 def compute_hmac_sig(payload: str) -> str:
     return hmac.new(SECURITY_SALT, payload.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
 
@@ -534,9 +528,7 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        if 'CSLoginServices.ashx' in parsed.path:
-            self.handle_cslogin_service(parsed)
-        elif parsed.path == '/api/voucher/save':
+        if parsed.path == '/api/voucher/save':
             self.handle_save_voucher()
         elif parsed.path == '/api/party/save':
             self.handle_save_party()
@@ -735,19 +727,8 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
                 "message": str(e)
             }, code=500)
 
-    def handle_cslogin_service(self, parsed):
-        """Only for a locally patched vendor APK, via the private, git-ignored busy_apk_compat.py."""
-        if APK_COMPAT is None:
-            self.send_json({"status": "error", "message": "Not found"}, code=404)
-            return
-        APK_COMPAT.handle(self, parsed)
-
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        if 'CSLoginServices.ashx' in parsed.path:
-            self.handle_cslogin_service(parsed)
-            return
-
         params = urllib.parse.parse_qs(parsed.query)
 
         company = params.get('company', [''])[0] or self.default_company()
@@ -5122,12 +5103,11 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     os.chdir(WEB_DIR)
-    import threading
 
     def run_server(port):
         try:
             s = http.server.ThreadingHTTPServer(('0.0.0.0', port), BusyApiHandler)
-            print(f"🚀 BUSY Server listening at http://0.0.0.0:{port}")
+            print(f"Kanakku server listening at http://0.0.0.0:{port}")
             s.serve_forever()
         except Exception as e:
             print(f"Error on port {port}: {e}")
@@ -5135,9 +5115,5 @@ if __name__ == '__main__':
     # Keep busy_local.db in step with BUSY (all year files of the configured companies)
     auto_sync_loop()
 
-    # Port 80 for Busy_Custom_Server.apk
-    t80 = threading.Thread(target=run_server, args=(80,), daemon=True)
-    t80.start()
-
-    # Port 3000 for Web Browser
-    run_server(3000)
+    # Browser / phone on the same network: http://<this-computer>:PORT (default 3000)
+    run_server(int(os.environ.get('PORT', '3000')))

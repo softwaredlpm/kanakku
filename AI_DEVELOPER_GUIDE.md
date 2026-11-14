@@ -16,14 +16,10 @@
 
 ### Rule 1: Real BDS Data Only (Zero Placeholders)
 - Never use placeholder numbers like `1000`, `999`, or fake names like `Test Item 1`.
-- If an endpoint returns 0, verify the company code (`COMP0044` / `COMP0027`), financial year (`2026`), and date range (`2026-04-01` to `2026-10-20`) in `busy_local.db`.
+- If an endpoint returns 0, verify the company code, financial year (`/api/fys`) and date range against `busy_local.db`.
 
-### Rule 2: Synchronize Web & APK (local machine only)
-- `apk_project/`, `*.apk`, `busy_apk_compat.py` are a private local setup and are git-ignored: never publish them (third-party app). The open-source project is "Kanakku".
-- On the local machine, whenever you modify `BusyMobileWeb/index.html`, immediately overwrite `apk_project/assets/index.html` (if that folder exists).
-```powershell
-Copy-Item -Path "BusyMobileWeb\index.html" -Destination "apk_project\assets\index.html" -Force
-```
+### Rule 2: No third-party app code
+- The project is "Kanakku". Never add, decompile or publish any BUSY / third-party app (APKs, patched builds, vendor login emulation). The only UI is `BusyMobileWeb/index.html`, served by `server.py` on port 3000 (or `$PORT`).
 
 ### Rule 3: AST & Syntax Check Before Answering
 - Vanilla JavaScript in `index.html` must remain 100% syntactically valid.

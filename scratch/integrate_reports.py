@@ -2,7 +2,7 @@
 
 Idempotent: each group's views, script and tile card live between BEGIN/END markers and are replaced on every run.
 Anchors in index.html: <!-- REPORTS:VIEWS -->, <!-- REPORTS:TILES -->, and </body> for scripts.
-After running: copy index.html to apk_project/assets and run node scratch/validate_syntax.js.
+After running: node scratch/validate_syntax.js.
 """
 import html
 import os
