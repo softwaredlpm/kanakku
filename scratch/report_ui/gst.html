@@ -1,0 +1,310 @@
+<!-- GST report group (backend: reports_gst.py) -->
+<!-- VIEWS -->
+            <!-- VIEW: GSTR-1 -->
+            <div id="view-gst-gstr1" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">GSTR-1 Outward</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Period</span>
+                    <select id="gst-gstr1-month" onchange="gstLoadGstr1()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                </div>
+                <div id="gst-gstr1-summary"></div>
+                <div class="flex gap-1 text-[11px] font-bold">
+                    <button id="gst-gstr1-tab-b2b" onclick="gstGstr1Tab('b2b')" class="flex-1 py-1.5 rounded-lg bg-busy-blue text-white">B2B</button>
+                    <button id="gst-gstr1-tab-b2c" onclick="gstGstr1Tab('b2c')" class="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600">B2C</button>
+                    <button id="gst-gstr1-tab-cdn" onclick="gstGstr1Tab('cdn')" class="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600">Credit Notes</button>
+                </div>
+                <div id="gst-gstr1-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: GSTR-3B -->
+            <div id="view-gst-gstr3b" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">GSTR-3B Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Period</span>
+                    <select id="gst-gstr3b-month" onchange="gstLoadGstr3b()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                </div>
+                <div id="gst-gstr3b-body" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: HSN SUMMARY -->
+            <div id="view-gst-hsn" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">HSN Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Period</span>
+                    <select id="gst-hsn-month" onchange="gstLoadHsn()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white"></select>
+                    <div class="flex gap-1 text-[11px] font-bold">
+                        <button id="gst-hsn-tab-outward" onclick="gstHsnTab('outward')" class="flex-1 py-1.5 rounded-lg bg-busy-blue text-white">Outward (Sales)</button>
+                        <button id="gst-hsn-tab-inward" onclick="gstHsnTab('inward')" class="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600">Inward (Purchase)</button>
+                    </div>
+                </div>
+                <div id="gst-hsn-summary"></div>
+                <div id="gst-hsn-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        let gstGstr1Data = null;
+        let gstGstr1Current = 'b2b';
+        let gstHsnData = null;
+        let gstHsnCurrent = 'outward';
+
+        function gstEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function gstAmt(n) {
+            const v = Number(n || 0);
+            return (v < 0 ? '-' : '') + fmtINR(v);
+        }
+
+        function gstFmtDate(d) {
+            if (!d) return '';
+            const p = String(d).split('-');
+            return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
+        }
+
+        // Fill a period <select> (Full FY + each month) once; keeps the user's choice afterwards.
+        // Default selection: the latest month that has data (GST returns are monthly).
+        async function gstInitMonths(id) {
+            const sel = document.getElementById(id);
+            if (!sel) return '';
+            const fy = parseInt(currentFY, 10) || 2026;
+            const ctx = `${currentCompany}|${fy}`;
+            if (sel.dataset.ctx !== ctx) {
+                const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                let html = `<option value="FY">Full FY ${fy}-${String(fy + 1).slice(2)} (till today)</option>`;
+                for (let i = 0; i < 12; i++) {
+                    const m = (3 + i) % 12;
+                    const y = fy + (i >= 9 ? 1 : 0);
+                    html += `<option value="${y}-${String(m + 1).padStart(2, '0')}">${names[m]} ${y}</option>`;
+                }
+                sel.innerHTML = html;
+                sel.dataset.ctx = ctx;
+                const r = typeof reportWeekRange === 'function' ? await reportWeekRange() : {};
+                if (r.month && [...sel.options].some(o => o.value === r.month)) sel.value = r.month;
+            }
+            return sel.value || 'FY';
+        }
+
+        async function gstPeriodQS(id) {
+            const m = await gstInitMonths(id);
+            if (m === 'FY') {
+                const fy = parseInt(currentFY, 10) || 2026;
+                return `&from=${fy}-04-01&to=${fy + 1}-03-31`;
+            }
+            return `&month=${encodeURIComponent(m)}`;
+        }
+
+        function gstTaxGrid(t, label) {
+            if (!t) return '';
+            return `
+                <div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs space-y-1">
+                    ${label ? `<div class="text-[10px] font-bold text-slate-400 uppercase">${gstEsc(label)}</div>` : ''}
+                    <div class="flex justify-between"><span class="text-slate-500">Taxable</span><span class="font-bold text-slate-800">${gstAmt(t.taxable)}</span></div>
+                    <div class="grid grid-cols-3 gap-1 text-center text-[10px]">
+                        <div class="bg-slate-50 rounded p-1"><div class="text-slate-400">CGST</div><div class="font-bold text-slate-700">${gstAmt(t.cgst)}</div></div>
+                        <div class="bg-slate-50 rounded p-1"><div class="text-slate-400">SGST</div><div class="font-bold text-slate-700">${gstAmt(t.sgst)}</div></div>
+                        <div class="bg-slate-50 rounded p-1"><div class="text-slate-400">IGST</div><div class="font-bold text-slate-700">${gstAmt(t.igst)}</div></div>
+                    </div>
+                    ${Math.abs(t.cess || 0) > 0.004 ? `<div class="flex justify-between"><span class="text-slate-500">Cess</span><span class="font-bold">${gstAmt(t.cess)}</span></div>` : ''}
+                    <div class="flex justify-between border-t border-slate-100 pt-1"><span class="text-slate-500">Total tax</span><span class="font-black text-busy-blue">${gstAmt(t.tax)}</span></div>
+                </div>`;
+        }
+
+        function gstOpenVch(code) {
+            if (typeof openVoucherModal === 'function') openVoucherModal(code);
+        }
+
+        // ------------------------------------------------------------------ GSTR-1
+        async function gstLoadGstr1() {
+            const list = document.getElementById('gst-gstr1-list');
+            const sum = document.getElementById('gst-gstr1-summary');
+            if (list) list.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>';
+            try {
+                const res = await fetch(`/api/reports/gst-gstr1?company=${currentCompany}&fy=${currentFY}${await gstPeriodQS('gst-gstr1-month')}`);
+                const d = await res.json();
+                gstGstr1Data = d;
+                const t = d.totals || {};
+                if (sum) sum.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">B2B (${(t.b2b || {}).invoices || 0})</div><div class="font-black text-slate-800">${gstAmt((t.b2b || {}).total)}</div></div>
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">B2C (${(t.b2c || {}).invoices || 0})</div><div class="font-black text-slate-800">${gstAmt((t.b2c || {}).total)}</div></div>
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Credit Notes (${(t.credit_notes || {}).notes || 0})</div><div class="font-black text-red-600">${gstAmt((t.credit_notes || {}).total)}</div></div>
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Net Outward</div><div class="font-black text-busy-blue">${gstAmt((t.net_outward || {}).total)}</div></div>
+                    </div>
+                    ${gstTaxGrid(t.net_outward, 'Net outward (after credit notes)')}
+                    ${Math.abs((t.nil_exempt_included || {}).taxable || 0) > 0.004 ? `<div class="text-[10px] text-slate-500 px-1">Includes nil / exempt (0%) value ${gstAmt(t.nil_exempt_included.taxable)}</div>` : ''}`;
+                gstGstr1Tab(gstGstr1Current);
+            } catch (e) {
+                if (list) list.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Failed to load GSTR-1: ${gstEsc(e.message)}</div>`;
+            }
+        }
+
+        function gstGstr1Tab(which) {
+            gstGstr1Current = which;
+            ['b2b', 'b2c', 'cdn'].forEach(k => {
+                const b = document.getElementById(`gst-gstr1-tab-${k}`);
+                if (!b) return;
+                b.className = 'flex-1 py-1.5 rounded-lg ' + (k === which ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-600');
+            });
+            const list = document.getElementById('gst-gstr1-list');
+            if (!list || !gstGstr1Data) return;
+            const rows = gstGstr1Data[which] || [];
+            if (!rows.length) {
+                list.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">No entries for this period.</div>';
+                return;
+            }
+            if (which === 'b2c') {
+                list.innerHTML = rows.map(r => `
+                    <div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-extrabold text-slate-800">GST ${r.rate}% Â· ${r.inter_state ? 'Inter-state (IGST)' : 'Local (CGST+SGST)'}</span>
+                            <span class="text-[10px] text-slate-400">${r.vouchers} inv</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">Place of supply: ${gstEsc(r.pos)}</div>
+                        <div class="flex justify-between"><span class="text-slate-500">Taxable</span><span class="font-bold">${gstAmt(r.taxable)}</span></div>
+                        <div class="flex justify-between text-[10px] text-slate-500"><span>CGST ${gstAmt(r.cgst)} Â· SGST ${gstAmt(r.sgst)} Â· IGST ${gstAmt(r.igst)}</span><span class="font-black text-busy-blue text-xs">${gstAmt(r.total)}</span></div>
+                    </div>`).join('');
+                return;
+            }
+            list.innerHTML = rows.map(v => `
+                <div onclick="gstOpenVch(${v.vch_code})" class="p-2.5 bg-white border border-slate-200 hover:border-busy-blue rounded-xl shadow-2xs space-y-1 cursor-pointer text-xs">
+                    <div class="flex justify-between items-center text-[10px] text-slate-400">
+                        <span class="font-mono bg-slate-100 px-1 rounded">${gstEsc(v.vch_no)}</span>
+                        <span>${gstFmtDate(v.date)}${v.section ? ' Â· ' + v.section : ''}</span>
+                    </div>
+                    <div class="font-extrabold text-slate-800 truncate">${gstEsc(v.party)}</div>
+                    <div class="text-[10px] text-slate-500 font-mono">${gstEsc(v.gstin || 'Unregistered')} Â· ${gstEsc(v.pos)}</div>
+                    <div class="flex justify-between"><span class="text-slate-500">Taxable</span><span class="font-bold">${gstAmt(v.taxable)}</span></div>
+                    <div class="flex justify-between text-[10px] text-slate-500"><span>${v.inter_state ? 'IGST ' + gstAmt(v.igst) : 'CGST ' + gstAmt(v.cgst) + ' Â· SGST ' + gstAmt(v.sgst)}</span><span class="font-black text-busy-blue text-xs">${gstAmt(v.total)}</span></div>
+                </div>`).join('');
+        }
+
+        // ------------------------------------------------------------------ GSTR-3B
+        async function gstLoadGstr3b() {
+            const body = document.getElementById('gst-gstr3b-body');
+            if (body) body.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>';
+            try {
+                const res = await fetch(`/api/reports/gst-gstr3b?company=${currentCompany}&fy=${currentFY}${await gstPeriodQS('gst-gstr3b-month')}`);
+                const d = await res.json();
+                const heads = ['cgst', 'sgst', 'igst', 'cess'];
+                const np = d.net_payable || {};
+                const payRows = heads.filter(h => h !== 'cess' || Math.abs(np.cess || 0) > 0.004 || Math.abs((d.itc.total || {}).cess || 0) > 0.004).map(h => `
+                    <tr class="border-t border-slate-100">
+                        <td class="py-1 font-bold uppercase">${h}</td>
+                        <td class="text-right">${gstAmt((d.output_tax || {})[h] + ((d.rcm_liability || {})[h] || 0))}</td>
+                        <td class="text-right">${gstAmt((d.itc.total || {})[h])}</td>
+                        <td class="text-right font-black ${np[h] > 0 ? 'text-red-600' : 'text-emerald-600'}">${gstAmt(np[h])}</td>
+                    </tr>`).join('');
+                const jv = d.journals_with_gst || [];
+                const ledgers = d.ledgers || [];
+                if (!body) return;
+                body.innerHTML = `
+                    <div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Net tax payable (Output + RCM - ITC)</div>
+                        <table class="w-full text-[11px]">
+                            <thead><tr class="text-[10px] text-slate-400"><th class="text-left">Head</th><th class="text-right">Liability</th><th class="text-right">ITC</th><th class="text-right">Net</th></tr></thead>
+                            <tbody>${payRows}</tbody>
+                            <tfoot><tr class="border-t border-slate-200"><td class="py-1 font-black">Total</td><td></td><td></td><td class="text-right font-black ${np.total > 0 ? 'text-red-600' : 'text-emerald-600'}">${gstAmt(np.total)}</td></tr></tfoot>
+                        </table>
+                        <div class="text-[10px] text-slate-400 mt-1">Negative = excess credit (before cross-utilisation / opening balance).</div>
+                    </div>
+                    ${gstTaxGrid(d.outward.taxable, '3.1(a) Outward taxable (Sales - Returns)')}
+                    ${Math.abs(d.outward.nil_exempt.taxable || 0) > 0.004 ? gstTaxGrid(d.outward.nil_exempt, '3.1(c) Outward nil / exempt') : ''}
+                    ${Math.abs(d.rcm_inward.taxable || 0) > 0.004 ? gstTaxGrid(d.rcm_inward, '3.1(d) Inward liable to reverse charge') : ''}
+                    ${gstTaxGrid(d.itc.purchases, '4(A) ITC - Purchases')}
+                    ${Math.abs(d.itc.purchase_returns.taxable || 0) > 0.004 ? gstTaxGrid(d.itc.purchase_returns, 'Less: Purchase returns') : ''}
+                    ${gstTaxGrid(d.itc.total, 'Net ITC available (incl. RCM)')}
+                    ${Math.abs(d.inward_nil_exempt.taxable || 0) > 0.004 ? `<div class="p-2.5 bg-white border border-slate-200 rounded-xl text-xs flex justify-between"><span class="text-slate-500">5. Inward nil / exempt</span><span class="font-bold">${gstAmt(d.inward_nil_exempt.taxable)}</span></div>` : ''}
+                    ${jv.length ? `<div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs space-y-1">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Journals / notes with GST details (${jv.length})</div>
+                        ${jv.map(v => `<div onclick="gstOpenVch(${v.vch_code})" class="flex justify-between gap-2 border-t border-slate-100 pt-1 cursor-pointer">
+                            <span class="truncate"><span class="font-mono text-[10px] text-slate-400">${gstFmtDate(v.date)} ${gstEsc(v.vch_no)}</span> ${gstEsc(v.party)}
+                            <span class="text-[9px] px-1 rounded ${v.is_rcm ? 'bg-amber-100 text-amber-700' : (v.posted_to_gst_ledgers ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500')}">${v.is_rcm ? 'RCM' : (v.posted_to_gst_ledgers ? 'posted' : 'not in ITC')}</span></span>
+                            <span class="font-bold whitespace-nowrap">${gstAmt(v.tax)}</span></div>`).join('')}
+                    </div>` : ''}
+                    ${ledgers.length ? `<div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs space-y-1">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">GST ledgers - period movement</div>
+                        ${ledgers.map(l => `<div class="flex justify-between border-t border-slate-100 pt-1"><span class="truncate">${gstEsc(l.name)}</span>
+                            <span class="whitespace-nowrap text-[10px]">Dr ${gstAmt(l.debit)} Â· Cr ${gstAmt(l.credit)}</span></div>`).join('')}
+                    </div>` : ''}`;
+            } catch (e) {
+                if (body) body.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Failed to load GSTR-3B: ${gstEsc(e.message)}</div>`;
+            }
+        }
+
+        // ------------------------------------------------------------------ HSN
+        async function gstLoadHsn() {
+            const list = document.getElementById('gst-hsn-list');
+            if (list) list.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>';
+            try {
+                const res = await fetch(`/api/reports/gst-hsn?company=${currentCompany}&fy=${currentFY}${await gstPeriodQS('gst-hsn-month')}`);
+                gstHsnData = await res.json();
+                gstHsnTab(gstHsnCurrent);
+            } catch (e) {
+                if (list) list.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Failed to load HSN summary: ${gstEsc(e.message)}</div>`;
+            }
+        }
+
+        function gstHsnTab(which) {
+            gstHsnCurrent = which;
+            ['outward', 'inward'].forEach(k => {
+                const b = document.getElementById(`gst-hsn-tab-${k}`);
+                if (b) b.className = 'flex-1 py-1.5 rounded-lg ' + (k === which ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-600');
+            });
+            const list = document.getElementById('gst-hsn-list');
+            const sum = document.getElementById('gst-hsn-summary');
+            if (!gstHsnData) return;
+            const rows = gstHsnData[which] || [];
+            const t = (gstHsnData.totals || {})[which];
+            if (sum) sum.innerHTML = gstTaxGrid(t, `${which === 'outward' ? 'Outward' : 'Inward'} total Â· ${rows.length} HSN lines`);
+            if (!list) return;
+            if (!rows.length) {
+                list.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">No entries for this period.</div>';
+                return;
+            }
+            list.innerHTML = rows.map(r => `
+                <div class="p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs space-y-1">
+                    <div class="flex justify-between items-center">
+                        <span class="font-mono font-extrabold text-slate-800">${gstEsc(r.hsn)}</span>
+                        <span class="text-[10px] font-bold text-busy-blue bg-slate-100 px-1.5 rounded">GST ${r.rate}%</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-500"><span>Qty ${Number(r.qty || 0).toLocaleString('en-IN')} ${gstEsc(r.uqc)}</span><span>${r.items} item(s)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Taxable</span><span class="font-bold">${gstAmt(r.taxable)}</span></div>
+                    <div class="flex justify-between text-[10px] text-slate-500"><span>CGST ${gstAmt(r.cgst)} Â· SGST ${gstAmt(r.sgst)} Â· IGST ${gstAmt(r.igst)}</span><span class="font-black text-busy-blue text-xs">${gstAmt(r.total)}</span></div>
+                </div>`).join('');
+        }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+gst-gstr1|GSTR-1 (Outward)|fa-solid fa-file-export|gstLoadGstr1
+gst-gstr3b|GSTR-3B Summary|fa-solid fa-scale-balanced|gstLoadGstr3b
+gst-hsn|HSN Summary|fa-solid fa-barcode|gstLoadHsn
+<!-- /TILES -->

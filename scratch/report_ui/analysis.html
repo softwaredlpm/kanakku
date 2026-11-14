@@ -1,0 +1,431 @@
+<!-- Analysis & Final Results report group (backend: reports_analysis.py) -->
+<!-- VIEWS -->
+            <!-- VIEW: PARTY-WISE SALES / PURCHASE -->
+            <div id="view-analysis-party" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="analysis-party-title" class="text-xs font-extrabold text-slate-800 uppercase">Party-wise Sales</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="analysis-party-btn-sales" onclick="analysisSetPartyType('sales')" class="py-1.5 rounded-lg font-bold bg-busy-blue text-white">Sales</button>
+                        <button id="analysis-party-btn-purchase" onclick="analysisSetPartyType('purchase')" class="py-1.5 rounded-lg font-bold bg-slate-100 text-slate-700">Purchase</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="analysis-party-from" onchange="analysisLoadParty()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="analysis-party-to" onchange="analysisLoadParty()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <input type="text" id="analysis-party-search" oninput="analysisRenderParty()" placeholder="Search party..." class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white">
+                </div>
+                <div id="analysis-party-summary"></div>
+                <div id="analysis-party-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: ITEM-WISE SALES / PURCHASE -->
+            <div id="view-analysis-item" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="analysis-item-title" class="text-xs font-extrabold text-slate-800 uppercase">Item-wise Sales</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="analysis-item-btn-sales" onclick="analysisSetItemType('sales')" class="py-1.5 rounded-lg font-bold bg-busy-blue text-white">Sales</button>
+                        <button id="analysis-item-btn-purchase" onclick="analysisSetItemType('purchase')" class="py-1.5 rounded-lg font-bold bg-slate-100 text-slate-700">Purchase</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="analysis-item-from" onchange="analysisLoadItem()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="analysis-item-to" onchange="analysisLoadItem()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <input type="text" id="analysis-item-search" oninput="analysisRenderItem()" placeholder="Search item..." class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white">
+                </div>
+                <div id="analysis-item-summary"></div>
+                <div id="analysis-item-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: MONTH-WISE SUMMARY -->
+            <div id="view-analysis-month" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Month-wise Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div id="analysis-month-summary"></div>
+                <div id="analysis-month-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: GROUP SUMMARY -->
+            <div id="view-analysis-group" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Group Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="analysis-group-from" onchange="analysisLoadGroupCode(analysisGroupCode)" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="analysis-group-to" onchange="analysisLoadGroupCode(analysisGroupCode)" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div id="analysis-group-path" class="flex flex-wrap items-center gap-1 text-[11px] font-bold"></div>
+                </div>
+                <div id="analysis-group-summary"></div>
+                <div id="analysis-group-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: PROFIT & LOSS -->
+            <div id="view-analysis-pl" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Profit &amp; Loss</span>
+                    <span class="w-12"></span>
+                </div>
+                <div id="analysis-pl-summary"></div>
+                <div id="analysis-pl-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        window.EXTRA_REPORT_VIEWS = (window.EXTRA_REPORT_VIEWS || []).concat(['view-analysis-party', 'view-analysis-item', 'view-analysis-month', 'view-analysis-group', 'view-analysis-pl']);
+
+        let analysisPartyType = 'sales';
+        let analysisPartyData = null;
+        let analysisItemType = 'sales';
+        let analysisItemData = null;
+        let analysisGroupCode = 0;
+
+        function analysisEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+        function analysisQty(n) {
+            return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 3 }).format(n || 0);
+        }
+        function analysisDrCr(amt, side) {
+            if (!amt) return '<span class="text-slate-400">-</span>';
+            return `${fmtINR(amt)} <span class="text-[9px] font-bold ${side === 'Dr' ? 'text-emerald-600' : 'text-rose-600'}">${side}</span>`;
+        }
+        function analysisSetHtml(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+        function analysisVal(id) {
+            const el = document.getElementById(id);
+            return el ? el.value : '';
+        }
+        // weekly = true: open on the last 7 days of data (transaction lists); false: whole FY (balances).
+        async function analysisInitDates(prefix, weekly = false) {
+            const f = document.getElementById(`${prefix}-from`);
+            const t = document.getElementById(`${prefix}-to`);
+            const ctx = `${currentCompany}|${currentFY}`;
+            if (f && f.dataset.ctx !== ctx) {  // company / FY changed: fall back to that company's default period
+                f.dataset.ctx = ctx;
+                f.value = '';
+                if (t) t.value = '';
+            }
+            if (weekly &&((f && !f.value) || (t && !t.value)) && typeof reportWeekRange === 'function') {
+                const r = await reportWeekRange();
+                if (f && !f.value && r.from) f.value = r.from;
+                if (t && !t.value && r.to) t.value = r.to;
+            }
+            const y = parseInt(currentFY, 10) || 2026;
+            if (f && !f.value) f.value = `${y}-04-01`;
+            if (t && !t.value) {
+                const today = new Date().toISOString().slice(0, 10);
+                const fyEnd = `${y + 1}-03-31`;
+                t.value = today < fyEnd ? today : fyEnd;
+            }
+        }
+        function analysisRangeQs(prefix) {
+            const f = analysisVal(`${prefix}-from`);
+            const t = analysisVal(`${prefix}-to`);
+            return `${f ? '&from=' + encodeURIComponent(f) : ''}${t ? '&to=' + encodeURIComponent(t) : ''}`;
+        }
+        function analysisToggle(prefix, type) {
+            ['sales', 'purchase'].forEach(k => {
+                const b = document.getElementById(`${prefix}-btn-${k}`);
+                if (!b) return;
+                b.className = 'py-1.5 rounded-lg font-bold ' + (k === type ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-700');
+            });
+        }
+        function analysisErr(id, e) {
+            analysisSetHtml(id, `<div class="text-center py-6 text-xs text-rose-500">Could not load report: ${analysisEsc(e && e.message ? e.message : e)}</div>`);
+        }
+
+        // ---------- Party-wise
+        function analysisLoadPartySales() { analysisSetPartyType('sales'); }
+        function analysisLoadPartyPurchase() { analysisSetPartyType('purchase'); }
+        function analysisSetPartyType(type) {
+            analysisPartyType = type;
+            analysisToggle('analysis-party', type);
+            const t = document.getElementById('analysis-party-title');
+            if (t) t.innerText = type === 'purchase' ? 'Party-wise Purchase' : 'Party-wise Sales';
+            analysisLoadParty();
+        }
+        async function analysisLoadParty() {
+            await analysisInitDates('analysis-party', true);
+            analysisSetHtml('analysis-party-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/analysis_partywise?company=${currentCompany}&fy=${currentFY}&type=${analysisPartyType}${analysisRangeQs('analysis-party')}`);
+                analysisPartyData = await res.json();
+                analysisRenderParty();
+            } catch (e) { analysisErr('analysis-party-list', e); }
+        }
+        function analysisRenderParty() {
+            const d = analysisPartyData;
+            if (!d || !d.rows) return;
+            analysisSetHtml('analysis-party-summary', `
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Parties</div><div class="font-black text-slate-800">${d.parties}</div></div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Invoices</div><div class="font-black text-slate-800">${d.total_invoices}</div></div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Net Amount</div><div class="font-black text-busy-blue text-[11px]">${fmtINR(d.total_amount)}</div></div>
+                </div>`);
+            const q = (analysisVal('analysis-party-search') || '').toLowerCase();
+            const rows = d.rows.filter(r => !q || (r.name || '').toLowerCase().includes(q));
+            if (!rows.length) { analysisSetHtml('analysis-party-list', '<div class="text-center py-6 text-xs text-slate-400">No vouchers in this period</div>'); return; }
+            analysisSetHtml('analysis-party-list', rows.map(r => `
+                <div class="bg-white border border-slate-200 rounded-xl shadow-2xs">
+                    <div onclick="analysisPartyDrill(${r.code})" class="p-3 cursor-pointer">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="text-xs font-extrabold text-slate-800">${analysisEsc(r.name)}</div>
+                            <div class="text-xs font-black text-busy-blue whitespace-nowrap">${fmtINR(r.amount)}</div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>${r.invoices} invoices &middot; Qty ${analysisQty(r.qty)}</span>
+                            <span class="font-bold">${r.share.toFixed(2)}%</span>
+                        </div>
+                        <div class="h-1 bg-slate-100 rounded mt-1"><div class="h-1 bg-busy-blue rounded" style="width:${Math.min(100, Math.max(0, r.share))}%"></div></div>
+                    </div>
+                    <div id="analysis-party-drill-${r.code}" class="hidden border-t border-slate-100"></div>
+                </div>`).join(''));
+        }
+        async function analysisPartyDrill(code) {
+            const box = document.getElementById(`analysis-party-drill-${code}`);
+            if (!box) return;
+            if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            box.innerHTML = '<div class="text-center py-3 text-[11px] text-slate-400">Loading invoices...</div>';
+            try {
+                const res = await fetch(`/api/reports/analysis_party_invoices?company=${currentCompany}&fy=${currentFY}&type=${analysisPartyType}&code=${code}${analysisRangeQs('analysis-party')}`);
+                const d = await res.json();
+                const canOpen = typeof openVoucherModal === 'function';
+                box.innerHTML = (d.rows || []).map(v => `
+                    <div ${canOpen ? `onclick="openVoucherModal(${v.vch_code})"` : ''} class="flex justify-between px-3 py-1.5 text-[11px] border-b border-slate-50 ${canOpen ? 'cursor-pointer hover:bg-slate-50' : ''}">
+                        <span class="text-slate-500">${analysisEsc(v.date)}</span>
+                        <span class="font-bold text-slate-700">${analysisEsc(v.vch_no)}</span>
+                        <span class="text-slate-500">Qty ${analysisQty(v.qty)}</span>
+                        <span class="font-extrabold text-slate-800">${fmtINR(v.amount)}</span>
+                    </div>`).join('') + `<div class="flex justify-between px-3 py-1.5 text-[11px] font-black text-busy-blue"><span>${d.count} invoices</span><span>${fmtINR(d.total_amount)}</span></div>`;
+            } catch (e) { box.innerHTML = '<div class="text-center py-3 text-[11px] text-rose-500">Could not load invoices</div>'; }
+        }
+
+        // ---------- Item-wise
+        function analysisLoadItemSales() { analysisSetItemType('sales'); }
+        function analysisLoadItemPurchase() { analysisSetItemType('purchase'); }
+        function analysisSetItemType(type) {
+            analysisItemType = type;
+            analysisToggle('analysis-item', type);
+            const t = document.getElementById('analysis-item-title');
+            if (t) t.innerText = type === 'purchase' ? 'Item-wise Purchase' : 'Item-wise Sales';
+            analysisLoadItem();
+        }
+        async function analysisLoadItem() {
+            await analysisInitDates('analysis-item', true);
+            analysisSetHtml('analysis-item-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/analysis_itemwise?company=${currentCompany}&fy=${currentFY}&type=${analysisItemType}${analysisRangeQs('analysis-item')}`);
+                analysisItemData = await res.json();
+                analysisRenderItem();
+            } catch (e) { analysisErr('analysis-item-list', e); }
+        }
+        function analysisRenderItem() {
+            const d = analysisItemData;
+            if (!d || !d.rows) return;
+            const units = Object.entries(d.qty_by_unit || {}).map(([u, q]) => `${analysisQty(q)} ${analysisEsc(u)}`).join(' &middot; ');
+            analysisSetHtml('analysis-item-summary', `
+                <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Gross (before bill sundries)</div><div class="font-black text-busy-blue">${fmtINR(d.total_gross)}</div></div>
+                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">Net (item value)</div><div class="font-black text-slate-800">${fmtINR(d.total_net)}</div></div>
+                </div>
+                <div class="mt-2 text-[10px] text-slate-500 text-center">${d.items} items &middot; ${units}</div>
+                <div class="text-[10px] text-slate-400 text-center">Direct lines ${fmtINR(d.direct_lines.gross)} &middot; Against challan ${fmtINR(d.against_challan_lines.gross)} (gross)</div>`);
+            const q = (analysisVal('analysis-item-search') || '').toLowerCase();
+            const rows = d.rows.filter(r => !q || (r.name || '').toLowerCase().includes(q));
+            if (!rows.length) { analysisSetHtml('analysis-item-list', '<div class="text-center py-6 text-xs text-slate-400">No item lines in this period</div>'); return; }
+            analysisSetHtml('analysis-item-list', rows.map(r => `
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="text-xs font-extrabold text-slate-800">${analysisEsc(r.name)}</div>
+                        <div class="text-right whitespace-nowrap">
+                            <div class="text-xs font-black text-busy-blue">${fmtINR(r.gross_amount)}</div>
+                            <div class="text-[10px] text-slate-500">Net ${fmtINR(r.net_amount)}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                        <span>Qty <b class="text-slate-700">${analysisQty(r.qty)} ${analysisEsc(r.unit)}</b> &middot; Avg ${fmtINR(r.avg_rate)}</span>
+                        <span class="font-bold">${r.share.toFixed(2)}%</span>
+                    </div>
+                </div>`).join(''));
+        }
+
+        // ---------- Month-wise
+        async function analysisLoadMonth() {
+            analysisSetHtml('analysis-month-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/analysis_monthwise?company=${currentCompany}&fy=${currentFY}`);
+                const d = await res.json();
+                const types = d.types || [];
+                const colour = { sales: 'text-emerald-700', purchase: 'text-amber-700', receipt: 'text-sky-700', payment: 'text-rose-700' };
+                analysisSetHtml('analysis-month-summary', `
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        ${types.map(t => `<div class="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div class="text-[10px] text-slate-500 uppercase">${t.label} (${d.totals[t.key].count})</div>
+                            <div class="font-black ${colour[t.key] || ''}">${fmtINR(d.totals[t.key].amount)}</div></div>`).join('')}
+                    </div>`);
+                analysisSetHtml('analysis-month-list', (d.rows || []).map(m => `
+                    <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                        <div class="text-xs font-extrabold text-slate-800 mb-1">${analysisEsc(m.label)}</div>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                            ${types.map(t => `<div class="flex justify-between"><span class="text-slate-500">${t.label} <span class="text-slate-400">(${m[t.key].count})</span></span>
+                                <span class="font-bold ${m[t.key].amount ? (colour[t.key] || '') : 'text-slate-300'}">${fmtINR(m[t.key].amount)}</span></div>`).join('')}
+                        </div>
+                    </div>`).join(''));
+            } catch (e) { analysisErr('analysis-month-list', e); }
+        }
+
+        // ---------- Group summary
+        function analysisLoadGroup() { analysisLoadGroupCode(0); }
+        async function analysisLoadGroupCode(code) {
+            analysisGroupCode = code || 0;
+            await analysisInitDates('analysis-group');
+            analysisSetHtml('analysis-group-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/analysis_group_summary?company=${currentCompany}&fy=${currentFY}&code=${analysisGroupCode}${analysisRangeQs('analysis-group')}`);
+                const d = await res.json();
+                const crumbs = [`<button onclick="analysisLoadGroupCode(0)" class="text-busy-blue">Primary Groups</button>`]
+                    .concat((d.path || []).map(p => `<i class="fa-solid fa-chevron-right text-[8px] text-slate-400"></i><button onclick="analysisLoadGroupCode(${p.code})" class="text-busy-blue">${analysisEsc(p.name)}</button>`));
+                analysisSetHtml('analysis-group-path', crumbs.join(''));
+                const t = d.total;
+                let diff = '';
+                if (d.difference_in_opening) {
+                    const x = d.difference_in_opening;
+                    diff = `<div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] flex justify-between">
+                        <span class="font-bold text-amber-800">${analysisEsc(x.label)}</span>
+                        <span class="font-black text-amber-800">${fmtINR(x.amount)} ${x.balancing_side}</span></div>
+                        <div class="text-[10px] text-slate-400 mt-1">Opening balances total ${x.excess_side} ${fmtINR(x.amount)}; this line on the ${x.balancing_side} side balances the trial.</div>`;
+                }
+                analysisSetHtml('analysis-group-summary', `
+                    <div class="p-3 bg-gradient-to-r from-teal-900 to-teal-700 text-white rounded-xl shadow-md text-xs">
+                        <div class="font-extrabold mb-1">${analysisEsc(d.name)}</div>
+                        <div class="grid grid-cols-2 gap-1 text-[11px]">
+                            <div>Opening: <b>${fmtINR(t.opening)} ${t.opening ? t.opening_side : ''}</b></div>
+                            <div class="text-right">Closing: <b>${fmtINR(t.closing)} ${t.closing ? t.closing_side : ''}</b></div>
+                            <div>Debit: <b>${fmtINR(t.debit)}</b></div>
+                            <div class="text-right">Credit: <b>${fmtINR(t.credit)}</b></div>
+                        </div>
+                    </div>${diff}`);
+                if (!(d.rows || []).length) { analysisSetHtml('analysis-group-list', '<div class="text-center py-6 text-xs text-slate-400">No sub-groups or accounts</div>'); return; }
+                analysisSetHtml('analysis-group-list', d.rows.map(r => `
+                    <div ${r.kind === 'group' && r.drill ? `onclick="analysisLoadGroupCode(${r.code})"` : ''} class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs ${r.kind === 'group' && r.drill ? 'cursor-pointer' : ''}">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="text-xs font-extrabold ${r.kind === 'group' ? 'text-busy-blue' : 'text-slate-800'}">
+                                ${r.kind === 'group' ? '<i class="fa-solid fa-folder text-[10px] mr-1"></i>' : ''}${analysisEsc(r.name)}
+                                ${r.kind === 'group' ? `<span class="text-[9px] text-slate-400 font-bold">(${r.accounts} a/c)</span>` : ''}
+                            </div>
+                            <div class="text-xs font-black whitespace-nowrap">${analysisDrCr(r.closing, r.closing_side)}</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1 text-[10px] text-slate-500 mt-1">
+                            <span>Op ${analysisDrCr(r.opening, r.opening_side)}</span>
+                            <span class="text-center">Dr ${fmtINR(r.debit)}</span>
+                            <span class="text-right">Cr ${fmtINR(r.credit)}</span>
+                        </div>
+                    </div>`).join(''));
+            } catch (e) { analysisErr('analysis-group-list', e); }
+        }
+
+        // ---------- Profit & Loss
+        function analysisPlSide(title, items, total) {
+            return `<div class="bg-white border border-slate-200 rounded-xl shadow-2xs">
+                <div class="px-3 py-2 border-b border-slate-100 text-[10px] font-extrabold uppercase text-slate-500">${title}</div>
+                ${items.map(h => `
+                    <div class="px-3 py-1.5 border-b border-slate-50">
+                        <div class="flex justify-between text-xs">
+                            <span class="font-bold ${h.provisional ? 'text-amber-700' : 'text-slate-800'}">${analysisEsc(h.name)}${h.provisional ? ' <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>' : ''}</span>
+                            <span class="font-black ${h.provisional ? 'text-amber-700' : 'text-slate-800'}">${h.amount < 0 ? '-' : ''}${fmtINR(h.amount)}</span>
+                        </div>
+                        ${(h.lines || []).map(l => `<div class="flex justify-between text-[10px] text-slate-500 pl-2">
+                            <span>${l.kind === 'group' ? '<i class="fa-solid fa-folder text-[8px] mr-1"></i>' : ''}${analysisEsc(l.name)}</span>
+                            <span>${analysisDrCr(Math.abs(l.amount_signed), l.amount_signed >= 0 ? 'Dr' : 'Cr')}</span></div>`).join('')}
+                    </div>`).join('')}
+                <div class="px-3 py-2 flex justify-between text-xs font-black text-busy-blue"><span>Total</span><span>${total < 0 ? '-' : ''}${fmtINR(total)}</span></div>
+            </div>`;
+        }
+        async function analysisLoadPl() {
+            analysisSetHtml('analysis-pl-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/analysis_pl?company=${currentCompany}&fy=${currentFY}`);
+                const d = await res.json();
+                const gp = d.gross_profit, np = d.net_profit;
+                const warn = (d.warnings || []).map(w => `<div class="text-[10px] text-rose-700">${analysisEsc(w)}</div>`).join('');
+                analysisSetHtml('analysis-pl-summary', `
+                    <div class="grid grid-cols-2 gap-2 text-center text-xs">
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">${analysisEsc(d.gross_result)}</div><div class="font-black ${gp >= 0 ? 'text-emerald-700' : 'text-rose-700'}">${fmtINR(gp)}</div></div>
+                        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><div class="text-[10px] text-slate-500 uppercase">${analysisEsc(d.net_result)}</div><div class="font-black ${np >= 0 ? 'text-emerald-700' : 'text-rose-700'}">${fmtINR(np)}</div></div>
+                    </div>
+                    <div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800">
+                        <b>Provisional:</b> ${analysisEsc(d.closing_stock_note)} Closing stock ${fmtINR(d.closing_stock)}.
+                        ${warn}
+                    </div>`);
+                analysisSetHtml('analysis-pl-list', `
+                    <div class="text-[11px] font-extrabold text-slate-700 uppercase">Trading Account</div>
+                    ${analysisPlSide('Dr (Opening stock, purchases, direct expenses)', d.trading.dr, d.trading.total_dr)}
+                    ${analysisPlSide('Cr (Sales, direct income, closing stock)', d.trading.cr, d.trading.total_cr)}
+                    <div class="p-2 rounded-lg text-xs font-black flex justify-between ${gp >= 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}"><span>${analysisEsc(d.gross_result)} c/o</span><span>${fmtINR(gp)}</span></div>
+                    <div class="text-[11px] font-extrabold text-slate-700 uppercase pt-2">Profit &amp; Loss Account</div>
+                    ${analysisPlSide('Dr (Indirect expenses)', d.pl.dr, d.pl.total_dr)}
+                    ${analysisPlSide('Cr (Indirect income)', d.pl.cr, d.pl.total_cr)}
+                    <div class="p-2 rounded-lg text-xs font-black flex justify-between ${np >= 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}"><span>${analysisEsc(d.net_result)}</span><span>${fmtINR(np)}</span></div>
+                    <div class="text-[10px] text-slate-400 text-center">Income ${fmtINR(d.income_total)} &middot; Expenses ${fmtINR(d.expense_total)} (from Revenue Accounts groups, whole FY)</div>`);
+            } catch (e) { analysisErr('analysis-pl-list', e); }
+        }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+analysis-party|Party-wise Sales|fa-solid fa-users|analysisLoadPartySales
+analysis-party|Party-wise Purchase|fa-solid fa-truck|analysisLoadPartyPurchase
+analysis-item|Item-wise Sales|fa-solid fa-boxes-stacked|analysisLoadItemSales
+analysis-item|Item-wise Purchase|fa-solid fa-dolly|analysisLoadItemPurchase
+analysis-month|Month-wise Summary|fa-solid fa-calendar-days|analysisLoadMonth
+analysis-group|Group Summary|fa-solid fa-sitemap|analysisLoadGroup
+analysis-pl|Profit & Loss|fa-solid fa-scale-balanced|analysisLoadPl
+<!-- /TILES -->

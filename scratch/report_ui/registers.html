@@ -1,0 +1,612 @@
+<!-- Registers report group (backend: reports_registers.py) -->
+<!-- VIEWS -->
+            <!-- VIEW: VOUCHER REGISTERS -->
+            <div id="view-registers-voucher" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="registers-voucher-title" class="text-xs font-extrabold text-slate-800 uppercase">Voucher Register</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div id="registers-voucher-types" class="grid grid-cols-5 gap-1"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="registers-voucher-from" onchange="registersLoadVoucher()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="registers-voucher-to" onchange="registersLoadVoucher()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="registers-voucher-q" oninput="registersVoucherFilter()" placeholder="Filter by no / account / MC..." class="w-full border border-slate-200 rounded-lg pl-7 pr-2 py-1.5 font-bold text-slate-700 focus:outline-none focus:border-busy-blue">
+                    </div>
+                </div>
+                <div id="registers-voucher-summary"></div>
+                <div id="registers-voucher-months" class="space-y-1"></div>
+                <div id="registers-voucher-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: CHALLAN / ORDER REGISTERS -->
+            <div id="view-registers-challan" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="registers-challan-title" class="text-xs font-extrabold text-slate-800 uppercase">Challan Register</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div id="registers-challan-types" class="grid grid-cols-4 gap-1"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="registers-challan-from" onchange="registersLoadChallan()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="registers-challan-to" onchange="registersLoadChallan()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div id="registers-challan-status" class="grid grid-cols-4 gap-1"></div>
+                </div>
+                <div id="registers-challan-summary"></div>
+                <div id="registers-challan-months" class="space-y-1"></div>
+                <div id="registers-challan-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: PARTY x ITEM SALES / PURCHASE -->
+            <div id="view-registers-partyitem" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="registers-partyitem-title" class="text-xs font-extrabold text-slate-800 uppercase">Party x Item Sales</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div id="registers-partyitem-modes" class="grid grid-cols-4 gap-1"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="registers-partyitem-from" onchange="registersLoadPartyItemData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="registers-partyitem-to" onchange="registersLoadPartyItemData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="registers-partyitem-q" oninput="registersPartyItemFilter()" placeholder="Filter list..." class="w-full border border-slate-200 rounded-lg pl-7 pr-2 py-1.5 font-bold text-slate-700 focus:outline-none focus:border-busy-blue">
+                    </div>
+                </div>
+                <div id="registers-partyitem-summary"></div>
+                <div id="registers-partyitem-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: STOCK MOVEMENT ANALYSIS / SLOW-MOVING -->
+            <div id="view-registers-movement" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="registers-movement-title" class="text-xs font-extrabold text-slate-800 uppercase">Stock Movement</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div id="registers-movement-tabs" class="grid grid-cols-2 gap-1"></div>
+                    <div id="registers-movement-range" class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="registers-movement-from" onchange="registersLoadMovementData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="registers-movement-to" onchange="registersLoadMovementData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div id="registers-movement-slowopts" class="hidden grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">No outward for (days)</span>
+                            <input type="number" min="0" id="registers-movement-days" value="90" onchange="registersLoadMovementData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">As on</span>
+                            <input type="date" id="registers-movement-asof" onchange="registersLoadMovementData()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="registers-movement-q" oninput="registersMovementFilter()" placeholder="Filter items..." class="w-full border border-slate-200 rounded-lg pl-7 pr-2 py-1.5 font-bold text-slate-700 focus:outline-none focus:border-busy-blue">
+                    </div>
+                </div>
+                <div id="registers-movement-summary"></div>
+                <div id="registers-movement-detail"></div>
+                <div id="registers-movement-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        // ===== Registers (reports_registers.py) =====
+        const registersState = {
+            ctx: '', vType: 'journal', vData: null, vRows: [], vShown: 0,
+            cType: 'dc', cStatus: 'all', cRows: [], cShown: 0,
+            piType: 'sales', piMode: 'party', piCode: 0, piName: '', piData: null,
+            mvTab: 'movement', mvData: null, mvItem: 0, mvShown: 0, mvRows: [], filterTimer: null
+        };
+
+        function registersEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function registersFmtDate(d) {
+            if (!d || d.length < 10) return d || '';
+            return d.slice(8, 10) + '-' + d.slice(5, 7) + '-' + d.slice(0, 4);
+        }
+        function registersQty(n) {
+            const v = Number(n || 0);
+            return v.toLocaleString('en-IN', { maximumFractionDigits: 3 });
+        }
+        function registersVal(id) {
+            const el = document.getElementById(id);
+            return el ? (el.value || '') : '';
+        }
+        function registersSetVal(id, v) {
+            const el = document.getElementById(id);
+            if (el && v != null) el.value = v;
+        }
+        function registersSetHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+        function registersSetText(id, t) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t;
+        }
+        function registersLoading(id) {
+            registersSetHTML(id, '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+        }
+        function registersErr(id, e) {
+            registersSetHTML(id, `<div class="text-center py-6 text-xs text-red-500">Failed to load: ${registersEsc(e && e.message ? e.message : e)}</div>`);
+        }
+        function registersOpenVch(code) {
+            if (code > 0 && typeof openVoucherModal === 'function') openVoucherModal(code);
+        }
+        // Reset filters when company / FY changed since the last load.
+        function registersCheckCtx() {
+            const ctx = currentCompany + '|' + currentFY;
+            if (registersState.ctx !== ctx) {
+                registersState.ctx = ctx;
+                ['voucher', 'challan', 'partyitem', 'movement'].forEach(k => {
+                    registersSetVal('registers-' + k + '-from', '');
+                    registersSetVal('registers-' + k + '-to', '');
+                    registersSetVal('registers-' + k + '-q', '');
+                });
+                registersSetVal('registers-movement-asof', '');
+                registersState.piCode = 0;
+                registersState.piName = '';
+                registersState.mvItem = 0;
+            }
+        }
+        function registersQS(prefix) {
+            let q = `company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}`;
+            const f = registersVal(prefix + '-from'), t = registersVal(prefix + '-to');
+            if (f) q += `&from=${f}`;
+            if (t) q += `&to=${t}`;
+            return q;
+        }
+        async function registersFetch(ep, qs) {
+            const res = await fetch(`/api/reports/${ep}?${qs}`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }
+        function registersTypeButtons(id, list, active, fn) {
+            registersSetHTML(id, list.map(([k, l]) => `
+                <button onclick="${fn}('${k}')" class="px-1 py-1.5 rounded-lg text-[10px] font-bold leading-tight ${active === k ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-600'}">${l}</button>`).join(''));
+        }
+        function registersMonthsTable(id, months, cols) {
+            registersSetHTML(id, (months || []).length ? `
+                <details class="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden text-[11px]">
+                    <summary class="px-3 py-2 font-bold text-slate-600 cursor-pointer">Month-wise totals (${months.length})</summary>
+                    <div class="grid grid-cols-3 gap-1 px-2 py-1.5 bg-slate-50 font-bold text-slate-500 uppercase text-[10px]">
+                        <span>Month</span><span class="text-right">${cols[0]}</span><span class="text-right">Amount</span></div>
+                    ${months.map(m => `
+                    <div class="grid grid-cols-3 gap-1 px-2 py-1.5 border-t border-slate-100">
+                        <span class="font-bold text-slate-700">${registersEsc(m.label)}</span>
+                        <span class="text-right">${cols[1](m)}</span>
+                        <span class="text-right font-extrabold text-slate-800">${fmtINR(m.amount)}</span>
+                    </div>`).join('')}
+                </details>` : '');
+        }
+        function registersPaged(listId, moreId, rows, shownKey, renderFn, moreFn) {
+            const next = rows.slice(registersState[shownKey], registersState[shownKey] + 150);
+            registersState[shownKey] += next.length;
+            const list = document.getElementById(listId);
+            if (!list) return;
+            const btn = document.getElementById(moreId);
+            if (btn) btn.remove();
+            list.insertAdjacentHTML('beforeend', next.map(renderFn).join(''));
+            if (registersState[shownKey] < rows.length) {
+                list.insertAdjacentHTML('beforeend', `<button id="${moreId}" onclick="${moreFn}()" class="w-full py-2 text-xs font-bold text-busy-blue bg-slate-50 border border-slate-200 rounded-lg">Show more (${rows.length - registersState[shownKey]} left)</button>`);
+            }
+        }
+        function registersDebounce(fn) {
+            if (registersState.filterTimer) clearTimeout(registersState.filterTimer);
+            registersState.filterTimer = setTimeout(fn, 250);
+        }
+
+        // ---------- 1. Voucher registers ----------
+        const registersVTypes = [['journal', 'Journal'], ['contra', 'Contra'], ['debit_note', 'Debit Note'], ['credit_note', 'Credit Note'],
+            ['receipt', 'Receipt'], ['payment', 'Payment'], ['stock_transfer', 'Stock Trf'], ['production', 'Production'],
+            ['stock_journal', 'Stock Jnl'], ['salary', 'Salary']];
+        function registersSetVType(t) {
+            registersState.vType = t;
+            return registersLoadVoucher();
+        }
+        function registersVoucherCard(r) {
+            const kind = registersState.vData ? registersState.vData.kind : 'acc';
+            let detail = '';
+            if (kind === 'acc') {
+                detail = `<div class="text-[10px] text-slate-600 truncate"><span class="font-bold text-emerald-700">Dr</span> ${registersEsc((r.dr || []).map(x => x.name).join(', '))}</div>
+                          <div class="text-[10px] text-slate-600 truncate"><span class="font-bold text-rose-700">Cr</span> ${registersEsc((r.cr || []).map(x => x.name).join(', '))}</div>`;
+            } else if (kind === 'stock') {
+                detail = `<div class="text-[10px] text-slate-600 truncate"><span class="font-bold text-rose-700">From</span> ${registersEsc((r.from_mc || []).join(', ') || '-')}</div>
+                          <div class="text-[10px] text-slate-600 truncate"><span class="font-bold text-emerald-700">To</span> ${registersEsc((r.to_mc || []).join(', ') || '-')}</div>`;
+            } else {
+                detail = `<div class="text-[10px] text-slate-600 truncate">${registersEsc(r.summary)}</div>`;
+            }
+            const title = kind === 'stock' ? (r.party || r.summary || '-') : (r.party || '-');
+            return `
+                <div onclick="registersOpenVch(${Number(r.vch_code)})" class="p-2.5 bg-white border border-slate-200 hover:border-busy-blue rounded-lg shadow-2xs text-xs cursor-pointer">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-800 truncate">${registersEsc(title)}</div>
+                            <div class="text-[10px] text-slate-500">${registersFmtDate(r.date)} · #${registersEsc(r.vch_no)}${r.series ? ' · ' + registersEsc(r.series) : ''}${r.pdc ? ' · PDC' : ''}</div>
+                        </div>
+                        <div class="text-right whitespace-nowrap">
+                            <div class="font-black text-busy-blue">${fmtINR(r.amount)}</div>
+                            ${kind === 'stock' ? `<div class="text-[10px] text-slate-400">Qty ${registersQty(r.qty)}</div>` : ''}
+                            ${kind === 'salary' ? `<div class="text-[10px] text-slate-400">Gross ${fmtINR(r.gross_pay)}</div>` : ''}
+                        </div>
+                    </div>
+                    ${detail}
+                </div>`;
+        }
+        function registersVoucherMore() {
+            registersPaged('registers-voucher-list', 'registers-voucher-more', registersState.vRows, 'vShown', registersVoucherCard, 'registersVoucherMore');
+        }
+        function registersVoucherRender() {
+            const d = registersState.vData;
+            if (!d) return;
+            const q = registersVal('registers-voucher-q').trim().toLowerCase();
+            registersState.vRows = !q ? (d.rows || []) : (d.rows || []).filter(r =>
+                [r.vch_no, r.party, r.summary, r.series].some(x => String(x || '').toLowerCase().includes(q)));
+            registersState.vShown = 0;
+            registersSetHTML('registers-voucher-list', registersState.vRows.length ? '' : '<div class="text-center py-6 text-xs text-slate-400">No vouchers in this period</div>');
+            if (registersState.vRows.length) registersVoucherMore();
+        }
+        function registersVoucherFilter() { registersDebounce(registersVoucherRender); }
+        async function registersLoadVoucher() {
+            registersCheckCtx();
+            registersTypeButtons('registers-voucher-types', registersVTypes, registersState.vType, 'registersSetVType');
+            registersLoading('registers-voucher-list');
+            try {
+                const d = await registersFetch('registers_voucher_register', `${registersQS('registers-voucher')}&type=${registersState.vType}`);
+                registersState.vData = d;
+                registersSetVal('registers-voucher-from', d.from);
+                registersSetVal('registers-voucher-to', d.to);
+                registersSetText('registers-voucher-title', d.title || 'Voucher Register');
+                const g = d.grand || {};
+                registersSetHTML('registers-voucher-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs grid grid-cols-2 gap-2">
+                        <div><div class="text-[10px] text-slate-300 uppercase">Vouchers</div><div class="font-black">${g.count || 0}</div></div>
+                        <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Grand Total</div><div class="font-black text-sm">${fmtINR(g.amount)}</div></div>
+                        ${d.kind === 'stock' ? `<div class="col-span-2 text-[10px] text-slate-300">Total qty ${registersQty(g.qty)}</div>` : ''}
+                    </div>`);
+                registersMonthsTable('registers-voucher-months', d.months, d.kind === 'stock'
+                    ? ['Qty', m => registersQty(m.qty) + ` <span class="text-slate-400">(${m.count})</span>`]
+                    : ['Vouchers', m => String(m.count)]);
+                registersVoucherRender();
+            } catch (e) {
+                registersErr('registers-voucher-list', e);
+            }
+        }
+        function registersLoadVoucherRegister() { return registersLoadVoucher(); }
+
+        // ---------- 2. Challan / order registers ----------
+        const registersCTypes = [['dc', 'Delivery Challan'], ['pc', 'Purchase Challan'], ['so', 'Sales Order'], ['po', 'Purchase Order']];
+        const registersCStatus = [['all', 'All'], ['pending', 'Pending'], ['partial', 'Partly'], ['cleared', 'Cleared']];
+        function registersSetCType(t) { registersState.cType = t; return registersLoadChallan(); }
+        function registersSetCStatus(s) { registersState.cStatus = s; return registersLoadChallan(); }
+        function registersStatusChip(r) {
+            const cls = { pending: 'bg-amber-100 text-amber-700', partial: 'bg-blue-100 text-blue-700', cleared: 'bg-emerald-100 text-emerald-700', none: 'bg-slate-100 text-slate-500' }[r.status] || 'bg-slate-100 text-slate-500';
+            return `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${cls}">${registersEsc(r.status_label)}</span>`;
+        }
+        function registersChallanCard(r) {
+            const cl = (r.clearing || []);
+            return `
+                <div onclick="registersOpenVch(${Number(r.vch_code)})" class="p-2.5 bg-white border border-slate-200 hover:border-busy-blue rounded-lg shadow-2xs text-xs cursor-pointer space-y-1">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-800 truncate">${registersEsc(r.party || '-')}</div>
+                            <div class="text-[10px] text-slate-500">${registersFmtDate(r.date)} · #${registersEsc(r.vch_no)}${r.series ? ' · ' + registersEsc(r.series) : ''}</div>
+                        </div>
+                        <div class="text-right whitespace-nowrap">
+                            <div class="font-black text-busy-blue">${fmtINR(r.amount)}</div>
+                            <div class="text-[10px] text-slate-400">Qty ${registersQty(r.qty)}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center gap-2">
+                        ${registersStatusChip(r)}
+                        ${r.status !== 'none' ? `<span class="text-[10px] text-slate-500">Cleared ${registersQty(r.cleared_qty)} · Pending <b class="text-slate-700">${registersQty(r.pending_qty)}</b></span>` : ''}
+                    </div>
+                    ${cl.length ? `<div class="flex flex-wrap gap-1">${cl.map(c => `
+                        <button onclick="event.stopPropagation(); registersOpenVch(${Number(c.vch_code)})" class="px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold text-busy-blue">${registersEsc(c.vch_no)} <span class="font-normal text-slate-400">${registersEsc(c.type_name)} ${registersQty(c.qty)}</span></button>`).join('')}</div>` : ''}
+                </div>`;
+        }
+        function registersChallanMore() {
+            registersPaged('registers-challan-list', 'registers-challan-more', registersState.cRows, 'cShown', registersChallanCard, 'registersChallanMore');
+        }
+        async function registersLoadChallan() {
+            registersCheckCtx();
+            registersTypeButtons('registers-challan-types', registersCTypes, registersState.cType, 'registersSetCType');
+            registersTypeButtons('registers-challan-status', registersCStatus, registersState.cStatus, 'registersSetCStatus');
+            registersLoading('registers-challan-list');
+            try {
+                const d = await registersFetch('registers_challan_register', `${registersQS('registers-challan')}&type=${registersState.cType}&status=${registersState.cStatus}`);
+                registersSetVal('registers-challan-from', d.from);
+                registersSetVal('registers-challan-to', d.to);
+                registersSetText('registers-challan-title', d.title || 'Register');
+                const g = d.grand || {}, st = d.status_totals || {};
+                const stLine = ['pending', 'partial', 'cleared', 'none'].filter(k => st[k] && st[k].count).map(k =>
+                    `<div class="flex justify-between text-[11px]"><span>${registersEsc(st[k].label)} (${st[k].count})</span><span class="font-bold">${fmtINR(st[k].amount)}</span></div>`).join('');
+                registersSetHTML('registers-challan-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><div class="text-[10px] text-slate-300 uppercase">Vouchers</div><div class="font-black">${g.count || 0}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Total</div><div class="font-black text-sm">${fmtINR(g.amount)}</div></div>
+                            <div><div class="text-[10px] text-slate-300 uppercase">Qty</div><div class="font-black">${registersQty(g.qty)}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Pending Qty</div><div class="font-black text-amber-300">${registersQty(g.pending_qty)}</div></div>
+                        </div>
+                        ${stLine ? `<div class="border-t border-slate-600 pt-1 space-y-0.5">${stLine}</div>` : ''}
+                        <div class="text-[10px] text-slate-400">Status as on ${registersFmtDate(d.as_of)}</div>
+                    </div>`);
+                registersMonthsTable('registers-challan-months', d.months, ['Qty', m => registersQty(m.qty) + ` <span class="text-slate-400">(${m.count})</span>`]);
+                registersState.cRows = d.rows || [];
+                registersState.cShown = 0;
+                registersSetHTML('registers-challan-list', registersState.cRows.length ? '' : '<div class="text-center py-6 text-xs text-slate-400">No vouchers</div>');
+                if (registersState.cRows.length) registersChallanMore();
+            } catch (e) {
+                registersErr('registers-challan-list', e);
+            }
+        }
+        function registersLoadChallanRegister() { return registersLoadChallan(); }
+
+        // ---------- 3. Party x Item ----------
+        function registersPiModes() {
+            const s = registersState;
+            registersSetHTML('registers-partyitem-modes', [['sales', 'Sales'], ['purchase', 'Purchase']].map(([k, l]) =>
+                `<button onclick="registersSetPiType('${k}')" class="px-1 py-1.5 rounded-lg text-[10px] font-bold ${s.piType === k ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-600'}">${l}</button>`).join('') +
+                [['party', 'By Party'], ['item', 'By Item']].map(([k, l]) =>
+                `<button onclick="registersSetPiMode('${k}')" class="px-1 py-1.5 rounded-lg text-[10px] font-bold ${s.piMode === k ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'}">${l}</button>`).join(''));
+        }
+        function registersSetPiType(t) { registersState.piType = t; return registersLoadPartyItemData(); }
+        function registersSetPiMode(m) {
+            registersState.piMode = m; registersState.piCode = 0; registersState.piName = '';
+            registersSetVal('registers-partyitem-q', '');
+            return registersLoadPartyItemData();
+        }
+        function registersPickPi(code) {
+            registersState.piCode = code;
+            registersSetVal('registers-partyitem-q', '');
+            return registersLoadPartyItemData();
+        }
+        function registersPiBack() {
+            registersState.piCode = 0;
+            return registersLoadPartyItemData();
+        }
+        function registersPartyItemRender() {
+            const d = registersState.piData;
+            if (!d) return;
+            const q = registersVal('registers-partyitem-q').trim().toLowerCase();
+            const rows = (d.rows || []).filter(r => !q || String(r.name || '').toLowerCase().includes(q));
+            const isItem = d.listing === 'item';
+            const pickable = !d.code;
+            registersSetHTML('registers-partyitem-list', rows.length ? `
+                <div class="bg-white border border-slate-200 rounded-xl shadow-2xs divide-y divide-slate-100 text-xs">
+                    ${rows.slice(0, 500).map(r => `
+                    <div ${pickable ? `onclick="registersPickPi(${Number(r.code)})"` : ''} class="px-3 py-2 ${pickable ? 'cursor-pointer hover:bg-slate-50' : ''}">
+                        <div class="flex justify-between gap-2">
+                            <span class="font-bold text-slate-800 truncate">${registersEsc(r.name || '-')}</span>
+                            <span class="font-black text-busy-blue whitespace-nowrap">${fmtINR(r.amount)}</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500">
+                            <span>${registersQty(r.qty)} ${registersEsc(r.unit || '')}${isItem ? ' · Avg ' + fmtINR(r.avg_rate) : ''}</span>
+                            <span>${r.vouchers} vch · last ${registersFmtDate(r.last_date)}</span>
+                        </div>
+                    </div>`).join('')}
+                    ${rows.length > 500 ? `<div class="px-3 py-2 text-[10px] text-slate-400">Showing 500 of ${rows.length}; filter to narrow</div>` : ''}
+                </div>` : '<div class="text-center py-6 text-xs text-slate-400">No entries</div>');
+        }
+        function registersPartyItemFilter() { registersDebounce(registersPartyItemRender); }
+        async function registersLoadPartyItemData() {
+            registersCheckCtx();
+            registersPiModes();
+            registersLoading('registers-partyitem-list');
+            const s = registersState;
+            try {
+                const d = await registersFetch('registers_party_item', `${registersQS('registers-partyitem')}&type=${s.piType}&mode=${s.piMode}&code=${s.piCode}`);
+                s.piData = d;
+                registersSetVal('registers-partyitem-from', d.from);
+                registersSetVal('registers-partyitem-to', d.to);
+                registersSetText('registers-partyitem-title', d.title || 'Party x Item');
+                const t = d.totals || {};
+                const head = d.code
+                    ? `<button onclick="registersPiBack()" class="text-[10px] font-bold text-sky-300"><i class="fa-solid fa-arrow-left"></i> All ${s.piMode === 'party' ? 'parties' : 'items'}</button>
+                       <div class="font-extrabold text-sm truncate">${registersEsc(d.code_name)}</div>`
+                    : `<div class="text-[10px] text-slate-300">Tap a ${s.piMode === 'party' ? 'party to see its items' : 'item to see its parties'}</div>`;
+                registersSetHTML('registers-partyitem-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-1">
+                        ${head}
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div><div class="text-[10px] text-slate-300 uppercase">${d.listing === 'item' ? 'Items' : 'Parties'}</div><div class="font-black">${t.count || 0}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Amount</div><div class="font-black text-sm">${fmtINR(t.amount)}</div></div>
+                            ${t.qty != null ? `<div class="col-span-2"><div class="text-[10px] text-slate-300 uppercase">Qty${t.mixed_units ? ' (mixed units)' : ''}</div><div class="font-black">${registersQty(t.qty)}</div></div>` : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400">Amount: ${registersEsc(d.amount_basis)}</div>
+                    </div>`);
+                registersPartyItemRender();
+            } catch (e) {
+                registersErr('registers-partyitem-list', e);
+            }
+        }
+        function registersLoadPartyItemSales() {
+            registersState.piType = 'sales';
+            registersState.piMode = 'party';
+            registersState.piCode = 0;
+            return registersLoadPartyItemData();
+        }
+        function registersLoadPartyItemPurchase() {
+            registersState.piType = 'purchase';
+            registersState.piMode = 'party';
+            registersState.piCode = 0;
+            return registersLoadPartyItemData();
+        }
+
+        // ---------- 4. Stock movement / slow-moving ----------
+        function registersSetMvTab(t) {
+            registersState.mvTab = t;
+            registersState.mvItem = 0;
+            return registersLoadMovementData();
+        }
+        function registersPickMvItem(code) {
+            registersState.mvItem = registersState.mvItem === code ? 0 : code;
+            return registersLoadMovementData();
+        }
+        function registersMovementCard(r) {
+            if (registersState.mvTab === 'slow') {
+                return `
+                    <div class="p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs text-xs">
+                        <div class="flex justify-between gap-2">
+                            <span class="font-bold text-slate-800 truncate">${registersEsc(r.name)}</span>
+                            <span class="font-black text-busy-blue whitespace-nowrap">${fmtINR(r.closing_value)}</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500">
+                            <span>Stock ${registersQty(r.closing_qty)} ${registersEsc(r.unit)}</span>
+                            <span>${r.never_out ? '<b class="text-rose-600">Never moved out</b>' : 'Out ' + registersFmtDate(r.last_out) + ' (' + r.days_since_out + 'd)'} · In ${r.last_in ? registersFmtDate(r.last_in) : '-'}</span>
+                        </div>
+                    </div>`;
+            }
+            return `
+                <div onclick="registersPickMvItem(${Number(r.code)})" class="p-2.5 bg-white border ${registersState.mvItem === r.code ? 'border-busy-blue' : 'border-slate-200'} rounded-lg shadow-2xs text-xs cursor-pointer">
+                    <div class="flex justify-between gap-2">
+                        <span class="font-bold text-slate-800 truncate">${registersEsc(r.name)}</span>
+                        <span class="font-black text-slate-800 whitespace-nowrap">${registersQty(r.closing)} ${registersEsc(r.unit)}</span>
+                    </div>
+                    <div class="grid grid-cols-3 text-[10px] text-slate-500">
+                        <span>Op ${registersQty(r.opening)}</span>
+                        <span class="text-emerald-700">In ${registersQty(r.inward)}</span>
+                        <span class="text-right text-rose-700">Out ${registersQty(r.outward)}</span>
+                    </div>
+                </div>`;
+        }
+        function registersMovementMore() {
+            registersPaged('registers-movement-list', 'registers-movement-more', registersState.mvRows, 'mvShown', registersMovementCard, 'registersMovementMore');
+        }
+        function registersMovementRender() {
+            const d = registersState.mvData;
+            if (!d) return;
+            const q = registersVal('registers-movement-q').trim().toLowerCase();
+            registersState.mvRows = (d.rows || []).filter(r => !q || String(r.name || '').toLowerCase().includes(q));
+            registersState.mvShown = 0;
+            registersSetHTML('registers-movement-list', registersState.mvRows.length ? '' : '<div class="text-center py-6 text-xs text-slate-400">No items</div>');
+            if (registersState.mvRows.length) registersMovementMore();
+        }
+        function registersMovementFilter() { registersDebounce(registersMovementRender); }
+        async function registersLoadMovementData() {
+            registersCheckCtx();
+            const s = registersState;
+            registersTypeButtons('registers-movement-tabs', [['movement', 'Movement'], ['slow', 'Slow / Non-moving']], s.mvTab, 'registersSetMvTab');
+            const rng = document.getElementById('registers-movement-range');
+            const slo = document.getElementById('registers-movement-slowopts');
+            if (rng) rng.classList.toggle('hidden', s.mvTab === 'slow');
+            if (slo) slo.classList.toggle('hidden', s.mvTab !== 'slow');
+            registersLoading('registers-movement-list');
+            try {
+                let d;
+                if (s.mvTab === 'slow') {
+                    let qs = `company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}`;
+                    const days = registersVal('registers-movement-days'), asof = registersVal('registers-movement-asof');
+                    if (days !== '') qs += `&days=${encodeURIComponent(days)}`;
+                    if (asof) qs += `&as_of=${asof}`;
+                    d = await registersFetch('registers_slow_moving', qs);
+                    registersSetVal('registers-movement-days', d.days);
+                    registersSetVal('registers-movement-asof', d.as_of);
+                    const t = d.totals || {};
+                    registersSetHTML('registers-movement-summary', `
+                        <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-1">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><div class="text-[10px] text-slate-300 uppercase">Items</div><div class="font-black">${t.count || 0} <span class="text-[10px] text-slate-400">of ${t.items_in_stock || 0} in stock</span></div></div>
+                                <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Stock Value</div><div class="font-black text-sm">${fmtINR(t.closing_value)}</div></div>
+                                <div><div class="text-[10px] text-slate-300 uppercase">Never moved out</div><div class="font-black text-rose-300">${t.never_out || 0}</div></div>
+                                <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Qty</div><div class="font-black">${registersQty(t.closing_qty)}</div></div>
+                            </div>
+                            <div class="text-[10px] text-slate-400">No outward (excluding stock transfers) since ${registersFmtDate(d.cutoff)}</div>
+                        </div>`);
+                    registersSetHTML('registers-movement-detail', '');
+                    registersSetText('registers-movement-title', 'Slow / Non-moving');
+                } else {
+                    d = await registersFetch('registers_stock_movement', `${registersQS('registers-movement')}&item=${s.mvItem}&limit=0`);
+                    registersSetVal('registers-movement-from', d.from);
+                    registersSetVal('registers-movement-to', d.to);
+                    registersSetText('registers-movement-title', 'Stock Movement');
+                    const t = d.totals || {};
+                    registersSetHTML('registers-movement-summary', `
+                        <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-1">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><div class="text-[10px] text-slate-300 uppercase">Items</div><div class="font-black">${t.items || 0}</div></div>
+                                <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Closing Value</div><div class="font-black text-sm">${fmtINR(t.closing_value)}</div></div>
+                                <div><div class="text-[10px] text-slate-300 uppercase">Opening Qty</div><div class="font-black">${registersQty(t.opening)}</div></div>
+                                <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Closing Qty</div><div class="font-black">${registersQty(t.closing)}</div></div>
+                                <div><div class="text-[10px] text-slate-300 uppercase">Inward</div><div class="font-black text-emerald-300">${registersQty(t.inward)}</div></div>
+                                <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Outward</div><div class="font-black text-rose-300">${registersQty(t.outward)}</div></div>
+                            </div>
+                            <div class="text-[10px] text-slate-400">Qty in main units (mixed). Stock transfers excluded from in/out (${registersQty(t.transfer_in)} moved between godowns).</div>
+                        </div>`);
+                    const it = d.item;
+                    registersSetHTML('registers-movement-detail', it ? `
+                        <div class="bg-white border border-busy-blue rounded-xl shadow-2xs overflow-hidden text-[11px]">
+                            <div class="px-3 py-2 font-extrabold text-slate-800 flex justify-between"><span class="truncate">${registersEsc(it.name)}</span><span class="text-slate-400 font-bold">${registersEsc(it.unit)}</span></div>
+                            <div class="grid grid-cols-4 gap-1 px-2 py-1.5 bg-slate-50 font-bold text-slate-500 uppercase text-[10px]">
+                                <span>Month</span><span class="text-right">In</span><span class="text-right">Out</span><span class="text-right">Closing</span></div>
+                            <div class="grid grid-cols-4 gap-1 px-2 py-1.5 border-t border-slate-100"><span class="font-bold text-slate-700">Opening</span><span></span><span></span><span class="text-right font-extrabold">${registersQty(it.opening)}</span></div>
+                            ${(it.months || []).map(m => `
+                            <div class="grid grid-cols-4 gap-1 px-2 py-1.5 border-t border-slate-100">
+                                <span class="font-bold text-slate-700">${registersEsc(m.label)}</span>
+                                <span class="text-right text-emerald-700">${m.inward ? registersQty(m.inward) : '-'}</span>
+                                <span class="text-right text-rose-700">${m.outward ? registersQty(m.outward) : '-'}</span>
+                                <span class="text-right font-extrabold text-slate-800">${registersQty(m.closing)}</span>
+                            </div>`).join('')}
+                            <div class="px-3 py-1.5 border-t border-slate-100 text-[10px] text-slate-500 flex justify-between"><span>Value @ ${fmtINR(it.avg_rate)}</span><span class="font-bold text-slate-800">${fmtINR(it.closing_value)}</span></div>
+                        </div>` : '');
+                }
+                s.mvData = d;
+                registersMovementRender();
+            } catch (e) {
+                registersErr('registers-movement-list', e);
+            }
+        }
+        function registersLoadMovement() {
+            registersState.mvTab = 'movement';
+            return registersLoadMovementData();
+        }
+        function registersLoadSlowMoving() {
+            registersState.mvTab = 'slow';
+            return registersLoadMovementData();
+        }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+registers-voucher|Voucher Registers|fa-solid fa-book|registersLoadVoucherRegister
+registers-challan|Challan / Order Registers|fa-solid fa-truck-ramp-box|registersLoadChallanRegister
+registers-partyitem|Party x Item Sales|fa-solid fa-table-cells|registersLoadPartyItemSales
+registers-partyitem|Party x Item Purchase|fa-solid fa-table-cells-large|registersLoadPartyItemPurchase
+registers-movement|Stock Movement Analysis|fa-solid fa-arrow-right-arrow-left|registersLoadMovement
+registers-movement|Slow / Non-moving Items|fa-solid fa-hourglass-half|registersLoadSlowMoving
+<!-- /TILES -->

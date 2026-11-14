@@ -1,0 +1,439 @@
+<!-- Account Books report group (backend: reports_accounts.py) -->
+<!-- VIEWS -->
+            <!-- VIEW: CASH BOOK -->
+            <div id="view-accounts-cashbook" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Cash Book</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <select id="accounts-cashbook-code" onchange="accountsLoadCashBook()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white">
+                        <option value="0">All cash accounts</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="accounts-cashbook-from" onchange="accountsLoadCashBook()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="accounts-cashbook-to" onchange="accountsLoadCashBook()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                </div>
+                <div id="accounts-cashbook-summary"></div>
+                <div id="accounts-cashbook-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: BANK BOOK -->
+            <div id="view-accounts-bankbook" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Bank Book</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <select id="accounts-bankbook-code" onchange="accountsLoadBankBook()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 bg-white">
+                        <option value="0">All bank accounts</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="accounts-bankbook-from" onchange="accountsLoadBankBook()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="accounts-bankbook-to" onchange="accountsLoadBankBook()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                </div>
+                <div id="accounts-bankbook-summary"></div>
+                <div id="accounts-bankbook-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: DAILY SUMMARY -->
+            <div id="view-accounts-daily" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Daily Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs grid grid-cols-2 gap-2 text-xs">
+                    <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                        <input type="date" id="accounts-daily-from" onchange="accountsLoadDailySummary()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                        <input type="date" id="accounts-daily-to" onchange="accountsLoadDailySummary()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                </div>
+                <div id="accounts-daily-summary"></div>
+                <div id="accounts-daily-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: ACCOUNT MONTHLY SUMMARY -->
+            <div id="view-accounts-monthly" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Monthly Summary</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-[11px]"></i>
+                        <input type="text" id="accounts-monthly-q" oninput="accountsMonthlySearchDebounced()" placeholder="Search account..." class="w-full border border-slate-200 rounded-lg pl-7 pr-2 py-1.5 font-bold text-slate-700 focus:outline-none focus:border-busy-blue">
+                    </div>
+                    <div id="accounts-monthly-picks" class="max-h-56 overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+                <div id="accounts-monthly-summary"></div>
+                <div id="accounts-monthly-list" class="space-y-2"></div>
+            </div>
+
+            <!-- VIEW: SALES / PURCHASE REGISTER -->
+            <div id="view-accounts-register" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="accounts-register-title" class="text-xs font-extrabold text-slate-800 uppercase">Sales Register</span>
+                    <span class="w-12"></span>
+                </div>
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs">
+                    <div id="accounts-register-types" class="grid grid-cols-4 gap-1"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">From</span>
+                            <input type="date" id="accounts-register-from" onchange="accountsLoadRegister()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                        <label class="block"><span class="text-[10px] font-bold text-slate-400 uppercase">To</span>
+                            <input type="date" id="accounts-register-to" onchange="accountsLoadRegister()" class="w-full border-b border-dashed border-busy-blue text-busy-blue font-extrabold bg-transparent focus:outline-none"></label>
+                    </div>
+                </div>
+                <div id="accounts-register-summary"></div>
+                <div id="accounts-register-months" class="space-y-1"></div>
+                <div id="accounts-register-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        // ===== Account Books (reports_accounts.py) =====
+        const accountsState = { regType: 'sales', regRows: [], regShown: 0, monthlyTimer: null, monthlyCode: 0, ctx: '' };
+
+        function accountsEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function accountsFmtDate(d) {
+            if (!d || d.length < 10) return d || '';
+            return d.slice(8, 10) + '-' + d.slice(5, 7) + '-' + d.slice(0, 4);
+        }
+        function accountsVal(id) {
+            const el = document.getElementById(id);
+            return el ? (el.value || '') : '';
+        }
+        function accountsSetVal(id, v) {
+            const el = document.getElementById(id);
+            if (el && v != null) el.value = v;
+        }
+        function accountsSetHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+        function accountsSigned(n) {
+            return (n < 0 ? '-' : '') + fmtINR(n);
+        }
+        // Reset filters when company / FY changed since the last load.
+        function accountsCheckCtx() {
+            const ctx = currentCompany + '|' + currentFY;
+            if (accountsState.ctx !== ctx) {
+                accountsState.ctx = ctx;
+                ['cashbook', 'bankbook', 'daily', 'register'].forEach(k => {
+                    accountsSetVal('accounts-' + k + '-from', '');
+                    accountsSetVal('accounts-' + k + '-to', '');
+                });
+                ['accounts-cashbook-code', 'accounts-bankbook-code'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '0';
+                });
+                accountsState.monthlyCode = 0;
+                accountsSetVal('accounts-monthly-q', '');
+                accountsSetHTML('accounts-monthly-summary', '');
+                accountsSetHTML('accounts-monthly-list', '');
+            }
+        }
+        function accountsQS(prefix) {
+            let q = `company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}`;
+            const f = accountsVal(prefix + '-from'), t = accountsVal(prefix + '-to');
+            if (f) q += `&from=${f}`;
+            if (t) q += `&to=${t}`;
+            return q;
+        }
+        function accountsErr(id, e) {
+            accountsSetHTML(id, `<div class="text-center py-6 text-xs text-red-500">Failed to load: ${accountsEsc(e && e.message ? e.message : e)}</div>`);
+        }
+
+        // ---------- Cash / Bank Book ----------
+        async function accountsLoadBook(kind) {
+            accountsCheckCtx();
+            const p = 'accounts-' + kind;
+            const sel = document.getElementById(p + '-code');
+            const code = sel ? (sel.value || '0') : '0';
+            accountsSetHTML(p + '-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const ep = kind === 'cashbook' ? 'accounts_cash_book' : 'accounts_bank_book';
+                const res = await fetch(`/api/reports/${ep}?${accountsQS(p)}&code=${encodeURIComponent(code)}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                if (sel) {
+                    const allLbl = kind === 'cashbook' ? 'All cash accounts' : 'All bank accounts';
+                    sel.innerHTML = `<option value="0">${allLbl}</option>` + (d.accounts || []).map(a =>
+                        `<option value="${a.code}">${accountsEsc(a.name)}</option>`).join('');
+                    sel.value = String(d.code || 0);
+                }
+                accountsSetVal(p + '-from', d.from);
+                accountsSetVal(p + '-to', d.to);
+                accountsSetHTML(p + '-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-2">
+                        <div class="flex justify-between"><span class="text-slate-300 uppercase text-[10px]">Opening</span><span class="font-black">${fmtINR(d.opening)} ${d.opening_type}</span></div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><div class="text-[10px] text-slate-300 uppercase">Debit (In)</div><div class="font-black text-emerald-300">${fmtINR(d.total_debit)}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Credit (Out)</div><div class="font-black text-rose-300">${fmtINR(d.total_credit)}</div></div>
+                        </div>
+                        <div class="flex justify-between border-t border-slate-600 pt-1"><span class="text-slate-300 uppercase text-[10px]">Closing</span><span class="font-black text-sm">${fmtINR(d.closing)} ${d.closing_type}</span></div>
+                    </div>
+                    ${(!d.code && (d.per_account || []).length > 1) ? `<div class="mt-2 bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 text-[11px]">` +
+                        d.per_account.map(a => `<div class="flex justify-between px-3 py-1.5"><span class="font-bold text-slate-700 truncate pr-2">${accountsEsc(a.name)}</span><span class="font-extrabold text-slate-800 whitespace-nowrap">${fmtINR(a.closing)} ${a.closing_type}</span></div>`).join('') + `</div>` : ''}`);
+                const rows = d.rows || [];
+                if (!rows.length) {
+                    accountsSetHTML(p + '-list', '<div class="text-center py-6 text-xs text-slate-400">No entries in this period</div>');
+                    return;
+                }
+                const showAcc = !d.code && (d.accounts || []).length > 1;
+                accountsSetHTML(p + '-list', rows.map(r => `
+                    <div class="p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs text-xs">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-800 truncate">${accountsEsc(r.particulars)}</div>
+                                <div class="text-[10px] text-slate-500">${accountsFmtDate(r.date)} · ${accountsEsc(r.vch_type_name)} #${accountsEsc(r.vch_no)}${showAcc ? ' · ' + accountsEsc(r.account_name) : ''}</div>
+                            </div>
+                            <div class="text-right whitespace-nowrap">
+                                ${r.debit ? `<div class="font-black text-emerald-600">${fmtINR(r.debit)} Dr</div>` : ''}
+                                ${r.credit ? `<div class="font-black text-rose-600">${fmtINR(r.credit)} Cr</div>` : ''}
+                                <div class="text-[10px] text-slate-400">Bal ${fmtINR(r.balance)} ${r.balance_type}</div>
+                            </div>
+                        </div>
+                    </div>`).join(''));
+            } catch (e) {
+                accountsErr(p + '-list', e);
+            }
+        }
+        function accountsLoadCashBook() { return accountsLoadBook('cashbook'); }
+        function accountsLoadBankBook() { return accountsLoadBook('bankbook'); }
+
+        // ---------- Daily Summary ----------
+        async function accountsLoadDailySummary() {
+            accountsCheckCtx();
+            accountsSetHTML('accounts-daily-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/accounts_daily_summary?${accountsQS('accounts-daily')}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                accountsSetVal('accounts-daily-from', d.from);
+                accountsSetVal('accounts-daily-to', d.to);
+                accountsSetHTML('accounts-daily-summary', `
+                    <div class="p-3 bg-gradient-to-r from-teal-900 to-teal-700 text-white rounded-xl shadow-md text-xs space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><div class="text-[10px] text-teal-200 uppercase">Vouchers</div><div class="font-black">${d.grand_count}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-teal-200 uppercase">Total Amount</div><div class="font-black">${fmtINR(d.grand_amount)}</div></div>
+                            <div><div class="text-[10px] text-teal-200 uppercase">Cash Net</div><div class="font-black">${accountsSigned(d.cash_net)}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-teal-200 uppercase">Bank Net</div><div class="font-black">${accountsSigned(d.bank_net)}</div></div>
+                        </div>
+                        <div class="border-t border-teal-600 pt-1 space-y-0.5">${(d.type_totals || []).map(t =>
+                            `<div class="flex justify-between text-[11px]"><span>${accountsEsc(t.name)} (${t.count})</span><span class="font-bold">${fmtINR(t.amount)}</span></div>`).join('')}</div>
+                    </div>`);
+                const days = (d.days || []).slice().reverse();
+                if (!days.length) {
+                    accountsSetHTML('accounts-daily-list', '<div class="text-center py-6 text-xs text-slate-400">No vouchers in this period</div>');
+                    return;
+                }
+                accountsSetHTML('accounts-daily-list', days.map(day => `
+                    <details class="bg-white border border-slate-200 rounded-lg shadow-2xs text-xs">
+                        <summary class="p-2.5 flex justify-between items-center cursor-pointer list-none">
+                            <div><div class="font-extrabold text-slate-800">${accountsFmtDate(day.date)}</div>
+                                <div class="text-[10px] text-slate-500">${day.count} vouchers · Cash ${accountsSigned(day.cash_net)} · Bank ${accountsSigned(day.bank_net)}</div></div>
+                            <div class="font-black text-busy-blue whitespace-nowrap">${fmtINR(day.amount)}</div>
+                        </summary>
+                        <div class="px-2.5 pb-2 space-y-0.5 border-t border-slate-100 pt-1">${day.types.map(t =>
+                            `<div class="flex justify-between text-[11px]"><span class="text-slate-600">${accountsEsc(t.name)} (${t.count})</span><span class="font-bold text-slate-800">${fmtINR(t.amount)}</span></div>`).join('')}</div>
+                    </details>`).join(''));
+            } catch (e) {
+                accountsErr('accounts-daily-list', e);
+            }
+        }
+
+        // ---------- Account Monthly Summary ----------
+        function accountsMonthlySearchDebounced() {
+            if (accountsState.monthlyTimer) clearTimeout(accountsState.monthlyTimer);
+            accountsState.monthlyTimer = setTimeout(accountsMonthlySearch, 300);
+        }
+        async function accountsMonthlySearch() {
+            const q = accountsVal('accounts-monthly-q').trim();
+            try {
+                const res = await fetch(`/api/reports/accounts_search?company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}&q=${encodeURIComponent(q)}&limit=50`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                const list = d.accounts || [];
+                accountsSetHTML('accounts-monthly-picks', list.length ? list.map(a => `
+                    <button onclick="accountsPickMonthly(${Number(a.code)})" class="w-full text-left px-2 py-1.5 hover:bg-slate-50 ${a.code === accountsState.monthlyCode ? 'bg-blue-50' : ''}">
+                        <div class="font-bold text-slate-800 truncate">${accountsEsc(a.name)}</div>
+                        <div class="text-[10px] text-slate-400">${accountsEsc(a.group_name)}</div>
+                    </button>`).join('') : '<div class="text-center py-3 text-slate-400">No accounts found</div>');
+            } catch (e) {
+                accountsErr('accounts-monthly-picks', e);
+            }
+        }
+        function accountsPickMonthly(code) {
+            accountsState.monthlyCode = code;
+            accountsSetHTML('accounts-monthly-picks', '');
+            accountsLoadMonthlyData();
+        }
+        async function accountsLoadMonthlyData() {
+            const code = accountsState.monthlyCode;
+            if (!code) return;
+            accountsSetHTML('accounts-monthly-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/accounts_monthly_summary?company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}&code=${code}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                if (d.error) { accountsSetHTML('accounts-monthly-list', `<div class="text-center py-6 text-xs text-slate-400">${accountsEsc(d.error)}</div>`); return; }
+                accountsSetVal('accounts-monthly-q', d.account_name);
+                accountsSetHTML('accounts-monthly-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs space-y-1">
+                        <div class="font-extrabold text-sm truncate">${accountsEsc(d.account_name)}</div>
+                        <div class="text-[10px] text-slate-300">${accountsEsc(d.group_name)}</div>
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div><div class="text-[10px] text-slate-300 uppercase">Opening</div><div class="font-black">${fmtINR(d.opening)} ${d.opening_type}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Closing</div><div class="font-black">${fmtINR(d.closing)} ${d.closing_type}</div></div>
+                            <div><div class="text-[10px] text-slate-300 uppercase">Total Debit</div><div class="font-black text-emerald-300">${fmtINR(d.total_debit)}</div></div>
+                            <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Total Credit</div><div class="font-black text-rose-300">${fmtINR(d.total_credit)}</div></div>
+                        </div>
+                    </div>`);
+                accountsSetHTML('accounts-monthly-list', `
+                    <div class="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden text-[11px]">
+                        <div class="grid grid-cols-4 gap-1 px-2 py-1.5 bg-slate-50 font-bold text-slate-500 uppercase text-[10px]">
+                            <span>Month</span><span class="text-right">Debit</span><span class="text-right">Credit</span><span class="text-right">Closing</span></div>
+                        ${(d.months || []).map(m => `
+                        <div class="grid grid-cols-4 gap-1 px-2 py-1.5 border-t border-slate-100">
+                            <span class="font-bold text-slate-700">${accountsEsc(m.label)}</span>
+                            <span class="text-right text-emerald-700">${m.debit ? fmtINR(m.debit) : '-'}</span>
+                            <span class="text-right text-rose-700">${m.credit ? fmtINR(m.credit) : '-'}</span>
+                            <span class="text-right font-extrabold text-slate-800">${fmtINR(m.closing)} ${m.closing_type}</span>
+                        </div>`).join('')}
+                    </div>`);
+            } catch (e) {
+                accountsErr('accounts-monthly-list', e);
+            }
+        }
+        function accountsLoadMonthly() {
+            accountsCheckCtx();
+            if (accountsState.monthlyCode) accountsLoadMonthlyData();
+            else accountsSetHTML('accounts-monthly-list', '<div class="text-center py-6 text-xs text-slate-400">Search and pick an account</div>');
+            accountsMonthlySearch();
+        }
+
+        // ---------- Sales / Purchase Register ----------
+        const accountsRegTypes = [['sales', 'Sales'], ['purchase', 'Purchase'], ['sales_return', 'Sales Ret'], ['purchase_return', 'Purc Ret']];
+        function accountsRenderRegTypes() {
+            accountsSetHTML('accounts-register-types', accountsRegTypes.map(([k, l]) => `
+                <button onclick="accountsSetRegType('${k}')" class="px-1 py-1.5 rounded-lg text-[10px] font-bold ${accountsState.regType === k ? 'bg-busy-blue text-white' : 'bg-slate-100 text-slate-600'}">${l}</button>`).join(''));
+        }
+        function accountsSetRegType(t) {
+            accountsState.regType = t;
+            accountsLoadRegister();
+        }
+        function accountsRegMore() {
+            const rows = accountsState.regRows;
+            const next = rows.slice(accountsState.regShown, accountsState.regShown + 200);
+            accountsState.regShown += next.length;
+            const html = next.map(r => `
+                <div class="p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs text-xs">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-800 truncate">${accountsEsc(r.party || '-')}</div>
+                            <div class="text-[10px] text-slate-500">${accountsFmtDate(r.date)} · #${accountsEsc(r.vch_no)}</div>
+                        </div>
+                        <div class="text-right whitespace-nowrap">
+                            <div class="font-black text-busy-blue">${fmtINR(r.total)}</div>
+                            <div class="text-[10px] text-slate-400">${r.taxable == null ? 'No GST data' : 'Taxable ' + fmtINR(r.taxable) + ' · Tax ' + fmtINR(r.tax)}</div>
+                        </div>
+                    </div>
+                </div>`).join('');
+            const list = document.getElementById('accounts-register-list');
+            if (!list) return;
+            const btn = document.getElementById('accounts-register-more');
+            if (btn) btn.remove();
+            list.insertAdjacentHTML('beforeend', html);
+            if (accountsState.regShown < rows.length) {
+                list.insertAdjacentHTML('beforeend', `<button id="accounts-register-more" onclick="accountsRegMore()" class="w-full py-2 text-xs font-bold text-busy-blue bg-slate-50 border border-slate-200 rounded-lg">Show more (${rows.length - accountsState.regShown} left)</button>`);
+            }
+        }
+        async function accountsLoadRegister() {
+            accountsCheckCtx();
+            accountsRenderRegTypes();
+            accountsSetHTML('accounts-register-list', '<div class="text-center py-6 text-xs text-slate-400">Loading...</div>');
+            try {
+                const res = await fetch(`/api/reports/accounts_register?${accountsQS('accounts-register')}&type=${accountsState.regType}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+                accountsSetVal('accounts-register-from', d.from);
+                accountsSetVal('accounts-register-to', d.to);
+                const tEl = document.getElementById('accounts-register-title');
+                if (tEl) tEl.innerText = d.title || 'Register';
+                const g = d.grand || {};
+                accountsSetHTML('accounts-register-summary', `
+                    <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md text-xs grid grid-cols-2 gap-2">
+                        <div><div class="text-[10px] text-slate-300 uppercase">Vouchers</div><div class="font-black">${g.count || 0}</div></div>
+                        <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Grand Total</div><div class="font-black text-sm">${fmtINR(g.total)}</div></div>
+                        <div><div class="text-[10px] text-slate-300 uppercase">Taxable</div><div class="font-black">${fmtINR(g.taxable)}</div></div>
+                        <div class="text-right"><div class="text-[10px] text-slate-300 uppercase">Tax</div><div class="font-black">${fmtINR(g.tax)}</div></div>
+                    </div>`);
+                accountsSetHTML('accounts-register-months', (d.months || []).length ? `
+                    <div class="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden text-[11px]">
+                        <div class="grid grid-cols-4 gap-1 px-2 py-1.5 bg-slate-50 font-bold text-slate-500 uppercase text-[10px]">
+                            <span>Month</span><span class="text-right">Taxable</span><span class="text-right">Tax</span><span class="text-right">Total</span></div>
+                        ${d.months.map(m => `
+                        <div class="grid grid-cols-4 gap-1 px-2 py-1.5 border-t border-slate-100">
+                            <span class="font-bold text-slate-700">${accountsEsc(m.label)} <span class="text-slate-400 font-normal">(${m.count})</span></span>
+                            <span class="text-right">${fmtINR(m.taxable)}</span>
+                            <span class="text-right">${fmtINR(m.tax)}</span>
+                            <span class="text-right font-extrabold text-slate-800">${fmtINR(m.total)}</span>
+                        </div>`).join('')}
+                    </div>` : '');
+                accountsState.regRows = d.rows || [];
+                accountsState.regShown = 0;
+                accountsSetHTML('accounts-register-list', accountsState.regRows.length ? '' : '<div class="text-center py-6 text-xs text-slate-400">No vouchers in this period</div>');
+                if (accountsState.regRows.length) accountsRegMore();
+            } catch (e) {
+                accountsErr('accounts-register-list', e);
+            }
+        }
+        function accountsLoadSalesRegister() { accountsState.regType = 'sales'; return accountsLoadRegister(); }
+        function accountsLoadPurchaseRegister() { accountsState.regType = 'purchase'; return accountsLoadRegister(); }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+accounts-cashbook|Cash Book|fa-solid fa-money-bill-wave|accountsLoadCashBook
+accounts-bankbook|Bank Book|fa-solid fa-building-columns|accountsLoadBankBook
+accounts-daily|Daily Summary|fa-solid fa-calendar-day|accountsLoadDailySummary
+accounts-monthly|Account Monthly Summary|fa-solid fa-calendar-days|accountsLoadMonthly
+accounts-register|Sales Register|fa-solid fa-file-invoice|accountsLoadSalesRegister
+accounts-register|Purchase Register|fa-solid fa-cart-shopping|accountsLoadPurchaseRegister
+<!-- /TILES -->

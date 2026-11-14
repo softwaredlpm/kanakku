@@ -1,0 +1,552 @@
+<!-- Batch (bale) report group: Batch Stock MC-wise (MC -> items -> batches), Batch Ledger, Item-wise Batch Summary.
+     Backend: reports_batch.py (ROUTES). -->
+<!-- VIEWS -->
+            <!-- VIEW: BATCH - BATCH STOCK MC-WISE -->
+            <div id="view-batch-mcs" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Batch Stock MC-wise</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div id="batch-mcs-path" class="flex flex-wrap items-center gap-1 text-[11px] font-bold text-busy-blue"></div>
+
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="batchMcsSearch" oninput="batchMcsOnSearch()" placeholder="Batch no / item / description..." autocomplete="off" class="w-full bg-slate-100 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <label class="flex items-center gap-1 text-[10px] text-slate-600 font-semibold shrink-0">
+                        <input type="checkbox" id="batchMcsHideZero" checked onchange="batchMcsLoadData()">
+                        Hide zero
+                    </label>
+                </div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md flex justify-between items-center">
+                    <div class="min-w-0">
+                        <div id="batch-mcs-title" class="text-[10px] text-slate-300 uppercase truncate">All Material Centres</div>
+                        <div id="batch-mcs-qty" class="text-lg font-black">0</div>
+                    </div>
+                    <div class="text-right">
+                        <div id="batch-mcs-cnt" class="text-sm font-bold">0 Batches</div>
+                        <div id="batch-mcs-sub" class="text-[10px] text-slate-300">0 Items</div>
+                    </div>
+                </div>
+
+                <div id="batch-mcs-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: BATCH - BATCH LEDGER -->
+            <div id="view-batch-ledger" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Batch Ledger</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2">
+                    <div class="relative">
+                        <input type="text" id="batchLedgerSearch" oninput="batchLedgerOnSearch()" placeholder="Search batch / bale no..." autocomplete="off" class="w-full bg-slate-100 border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <div id="batchLedgerResults" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg"></div>
+                    </div>
+                    <div id="batchLedgerPicked" class="text-[11px] font-bold text-busy-blue truncate">No batch selected</div>
+                    <select id="batchLedgerMc" onchange="batchLedgerLoadData()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <option value="0">All Material Centres</option>
+                    </select>
+                </div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md grid grid-cols-4 gap-1 text-center">
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Opening</div>
+                        <div id="batch-ledger-open" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-emerald-300 uppercase">In</div>
+                        <div id="batch-ledger-in" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-rose-300 uppercase">Out</div>
+                        <div id="batch-ledger-out" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Closing</div>
+                        <div id="batch-ledger-close" class="text-xs font-black">0</div>
+                    </div>
+                </div>
+                <div id="batch-ledger-info" class="text-[10px] text-slate-400 text-center"></div>
+
+                <div id="batch-ledger-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Search and select a batch</div>
+                </div>
+            </div>
+
+            <!-- VIEW: BATCH - ITEM-WISE BATCH SUMMARY -->
+            <div id="view-batch-item" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Item-wise Batch Summary</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2">
+                    <div class="relative">
+                        <input type="text" id="batchItemSearch" oninput="batchItemOnSearch()" placeholder="Search item..." autocomplete="off" class="w-full bg-slate-100 border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <div id="batchItemResults" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg"></div>
+                    </div>
+                    <div id="batchItemName" class="text-[11px] font-bold text-busy-blue truncate">No item selected</div>
+                    <select id="batchItemMc" onchange="batchItemLoadData()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <option value="0">All Material Centres</option>
+                    </select>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="batchItemFilter" oninput="batchItemRender()" placeholder="Filter batch no / description..." autocomplete="off" class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <label class="flex items-center gap-1 text-[10px] text-slate-600 font-semibold shrink-0">
+                            <input type="checkbox" id="batchItemHideZero" checked onchange="batchItemRender()">
+                            Hide zero
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md grid grid-cols-4 gap-1 text-center">
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Opening</div>
+                        <div id="batch-item-open" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-emerald-300 uppercase">In</div>
+                        <div id="batch-item-in" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-rose-300 uppercase">Out</div>
+                        <div id="batch-item-out" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Closing</div>
+                        <div id="batch-item-close" class="text-xs font-black">0</div>
+                    </div>
+                </div>
+                <div id="batch-item-compare"></div>
+
+                <div id="batch-item-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Search and select an item</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        // ===================== Batch / bale reports (reports_batch.py) =====================
+        let batchMcsData = null;
+        let batchMcsMc = 0;              // 0 = MC summary
+        let batchMcsItem = 0;            // 0 = items of the MC
+        let batchMcsItemName = '';
+        let batchMcsSearchTimer = null;
+        let batchMcListLoaded = '';
+        let batchLedgerPick = null;      // {batch, item, itemName}
+        let batchLedgerSearchTimer = null;
+        let batchItemPick = null;        // {Code, Name}
+        let batchItemData = null;
+        let batchItemSearchTimer = null;
+
+        function batchEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+        function batchQty(n) {
+            return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 });
+        }
+        function batchBase(path) {
+            return `/api/reports/${path}?company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}`;
+        }
+        function batchSetText(id, txt) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = txt;
+        }
+        function batchSetHtml(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+        function batchMsg(text, cls) {
+            return `<div class="text-center py-6 text-xs ${cls || 'text-slate-400'}">${batchEsc(text)}</div>`;
+        }
+        function batchShowView(id) {
+            ['view-batch-mcs', 'view-batch-ledger', 'view-batch-item'].forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.classList.toggle('hidden', v !== id);
+            });
+        }
+        async function batchEnsureMcList() {
+            const key = `${currentCompany}|${currentFY}`;
+            if (batchMcListLoaded === key) return;
+            try {
+                const res = await fetch(batchBase('batch-mcs'));
+                const data = await res.json();
+                const opts = '<option value="0">All Material Centres</option>' +
+                    (data.mcs || []).map(m => `<option value="${Number(m.Code)}">${batchEsc(m.Name)}</option>`).join('');
+                ['batchLedgerMc', 'batchItemMc'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (sel) sel.innerHTML = opts;
+                });
+                batchMcListLoaded = key;
+                batchLedgerPick = null;
+                batchItemPick = null;
+                batchItemData = null;
+                batchSetText('batchLedgerPicked', 'No batch selected');
+                batchSetText('batchItemName', 'No item selected');
+            } catch (err) {
+                console.error('Batch MC list error:', err);
+            }
+        }
+        function batchBatchRow(b, onclick) {
+            const descs = (b.Descriptions || []).length > 1 ? b.Descriptions.join(' | ') : (b.Description || '');
+            return `
+                <div ${onclick ? `onclick="${onclick}"` : ''} data-batch="${batchEsc(b.BatchNo)}" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs ${onclick ? 'cursor-pointer hover:border-busy-blue' : ''}">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-black text-busy-blue font-mono">${batchEsc(b.BatchNo)}</div>
+                            ${descs ? `<div class="text-[10px] font-semibold text-slate-600 leading-tight">${batchEsc(descs)}</div>` : ''}
+                            <div class="text-[10px] text-slate-400">${b.McName ? batchEsc(b.McName) + ' · ' : ''}In ${batchEsc(b.FirstInDate || '-')} · Last ${batchEsc(b.LastDate || '-')}</div>
+                            ${(b.StockIn || []).length ? `<div class="text-[10px] text-slate-400 truncate">${b.StockIn.map(s => batchEsc(s.McName) + ': ' + batchQty(s.Closing)).join(' · ')}</div>` : ''}
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-xs font-black ${b.Closing < 0 ? 'text-rose-600' : 'text-slate-900'}">${batchQty(b.Closing)}</div>
+                            <div class="text-[10px] text-slate-400">Op ${batchQty(b.Opening)}</div>
+                        </div>
+                    </div>
+                    <div class="mt-1.5 grid grid-cols-2 gap-1 text-[10px] text-center">
+                        <div class="bg-emerald-50 rounded-md py-0.5"><span class="text-slate-400">In</span> <b class="text-emerald-700">${batchQty(b.In)}</b></div>
+                        <div class="bg-rose-50 rounded-md py-0.5"><span class="text-slate-400">Out</span> <b class="text-rose-700">${batchQty(b.Out)}</b></div>
+                    </div>
+                </div>`;
+        }
+
+        // ---------- 1. Batch Stock MC-wise ----------
+        function batchLoadMcs() {
+            batchMcsDrill(0, 0, '');
+        }
+
+        function batchMcsOnSearch() {
+            clearTimeout(batchMcsSearchTimer);
+            batchMcsSearchTimer = setTimeout(batchMcsLoadData, 350);
+        }
+
+        function batchMcsDrill(mc, item, itemName) {
+            batchMcsMc = Number(mc) || 0;
+            batchMcsItem = Number(item) || 0;
+            batchMcsItemName = itemName || '';
+            batchMcsLoadData();
+        }
+
+        async function batchMcsLoadData() {
+            const q = document.getElementById('batchMcsSearch')?.value || '';
+            const hz = document.getElementById('batchMcsHideZero')?.checked ? 1 : 0;
+            batchSetHtml('batch-mcs-list', batchMsg('Loading batch stock...'));
+            try {
+                const res = await fetch(`${batchBase('batch-mc-stock')}&mc=${batchMcsMc}&item=${batchMcsItem}&hide_zero=${hz}&search=${encodeURIComponent(q.trim())}`);
+                batchMcsData = await res.json();
+                batchMcsRender();
+            } catch (err) {
+                console.error('Batch MC stock error:', err);
+                batchSetHtml('batch-mcs-list', batchMsg('Failed to load batch stock', 'text-rose-500'));
+            }
+        }
+
+        function batchMcsRender() {
+            const d = batchMcsData;
+            if (!d) return;
+            const t = d.totals || {};
+            batchSetText('batch-mcs-qty', `${batchQty(t.closing)} Qty`);
+            batchSetText('batch-mcs-cnt', `${t.batches_with_stock || 0} Batches`);
+            batchSetText('batch-mcs-sub', `${t.items_with_stock || 0} Items in stock${d.hide_zero ? '' : ' · ' + (t.batch_count || 0) + ' batches'}`);
+            const mcName = d.mc?.Name || 'Material Centre';
+            const crumbs = [`<button onclick="batchMcsDrill(0, 0, '')" class="hover:underline">All MCs</button>`];
+            if (batchMcsMc > 0) crumbs.push(`<i class="fa-solid fa-chevron-right text-[8px] text-slate-400"></i><button onclick="batchMcsDrill(${batchMcsMc}, 0, '')" class="hover:underline">${batchEsc(mcName)}</button>`);
+            if (batchMcsItem > 0) crumbs.push(`<i class="fa-solid fa-chevron-right text-[8px] text-slate-400"></i><span class="text-slate-600">${batchEsc(d.item?.Name || batchMcsItemName)}</span>`);
+            batchSetHtml('batch-mcs-path', crumbs.join(''));
+
+            if (d.level === 'batches') {
+                batchSetText('batch-mcs-title', `${d.item?.Name || ''}${d.mc ? ' · ' + d.mc.Name : ''}`);
+                const rows = d.batches || [];
+                batchSetHtml('batch-mcs-list', rows.length ? rows.map(b =>
+                    batchBatchRow(b, `batchOpenLedgerFor(this.dataset.batch, ${Number(b.ItemCode)}, ${Number(b.McCode)})`)).join('') : batchMsg('No batches'));
+                return;
+            }
+            if (d.level === 'items') {
+                batchSetText('batch-mcs-title', mcName);
+                const rows = d.items || [];
+                batchSetHtml('batch-mcs-list', rows.length ? rows.map(it => `
+                    <div onclick="batchMcsDrill(${batchMcsMc}, ${Number(it.Code)}, this.dataset.name)" data-name="${batchEsc(it.Name)}" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-busy-blue">
+                        <div class="flex-1 mr-2 min-w-0">
+                            <h4 class="text-xs font-bold text-slate-900 leading-tight">${batchEsc(it.Name)}</h4>
+                            <div class="text-[10px] text-slate-400 mt-0.5">${it.batches_with_stock} batches in stock${it.batch_count !== it.batches_with_stock ? ' · ' + it.batch_count + ' total' : ''}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-black text-slate-900">${batchQty(it.closing)} ${batchEsc(it.UnitName)}</div>
+                            <div class="text-[10px] text-slate-400">In ${batchQty(it.in)} · Out ${batchQty(it.out)}</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 ml-2"></i>
+                    </div>`).join('') : batchMsg('No batch stock in this material centre'));
+                return;
+            }
+            batchSetText('batch-mcs-title', `All Material Centres · ${t.mc_count || 0} MCs`);
+            const rows = d.mcs || [];
+            batchSetHtml('batch-mcs-list', rows.length ? rows.map(m => `
+                <div onclick="batchMcsDrill(${Number(m.Code)}, 0, '')" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-busy-blue">
+                    <div class="flex-1 mr-2 min-w-0">
+                        <h4 class="text-xs font-bold text-slate-900 leading-tight truncate"><i class="fa-solid fa-warehouse text-slate-400 mr-1"></i>${batchEsc(m.Name)}</h4>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${m.batches_with_stock} batches · ${m.items_with_stock} items</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-black text-slate-900">${batchQty(m.closing)} Qty</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 ml-2"></i>
+                </div>`).join('') : batchMsg('No batch stock found'));
+        }
+
+        // ---------- 2. Batch Ledger ----------
+        async function batchLoadLedger() {
+            await batchEnsureMcList();
+            if (batchLedgerPick) {
+                batchLedgerLoadData();
+            } else {
+                batchSetHtml('batch-ledger-list', batchMsg('Search and select a batch'));
+            }
+        }
+
+        function batchLedgerOnSearch() {
+            clearTimeout(batchLedgerSearchTimer);
+            batchLedgerSearchTimer = setTimeout(batchLedgerSearchBatches, 300);
+        }
+
+        async function batchLedgerSearchBatches() {
+            const q = document.getElementById('batchLedgerSearch')?.value || '';
+            const box = document.getElementById('batchLedgerResults');
+            if (!box) return;
+            if (q.trim().length < 1) {
+                box.classList.add('hidden');
+                return;
+            }
+            try {
+                const res = await fetch(`${batchBase('batch-search')}&search=${encodeURIComponent(q.trim())}&limit=40`);
+                const data = await res.json();
+                const rows = data.results || [];
+                box.innerHTML = rows.length ? rows.map(r => `
+                    <button type="button" onclick="batchLedgerPickBatch(this.dataset.batch, ${Number(r.ItemCode)}, this.dataset.name, ${Number(r.McCode)})" data-batch="${batchEsc(r.BatchNo)}" data-name="${batchEsc(r.ItemName)}"
+                        class="w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50">
+                        <div class="flex justify-between gap-2">
+                            <span class="text-xs font-black text-busy-blue font-mono">${batchEsc(r.BatchNo)}</span>
+                            <span class="text-[11px] font-bold ${r.Closing ? 'text-slate-900' : 'text-slate-400'}">${batchQty(r.Closing)}</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-slate-800 leading-tight">${batchEsc(r.ItemName)}</div>
+                        <div class="text-[10px] text-slate-400">${batchEsc(r.McName)}${r.Description ? ' · ' + batchEsc(r.Description) : ''}</div>
+                    </button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-400">No batches found</div>';
+                box.classList.remove('hidden');
+            } catch (err) {
+                console.error('Batch search error:', err);
+            }
+        }
+
+        function batchLedgerPickBatch(batch, item, itemName, mc) {
+            batchLedgerPick = { batch: batch, item: Number(item) || 0, itemName: itemName || '' };
+            batchSetText('batchLedgerPicked', `${batch} · ${itemName || ''}`);
+            const box = document.getElementById('batchLedgerResults');
+            if (box) box.classList.add('hidden');
+            const inp = document.getElementById('batchLedgerSearch');
+            if (inp) inp.value = '';
+            const sel = document.getElementById('batchLedgerMc');
+            if (sel) sel.value = String(mc || 0);
+            batchLedgerLoadData();
+        }
+
+        // Open the ledger from the MC-wise drill (shows the ledger view directly, no switchTab).
+        function batchOpenLedgerFor(batch, item, mc) {
+            batchShowView('view-batch-ledger');
+            batchEnsureMcList().then(() => {
+                batchLedgerPickBatch(batch, item, batchMcsData?.item?.Name || '', mc);
+            });
+        }
+
+        async function batchLedgerLoadData() {
+            if (!batchLedgerPick) return;
+            const mc = document.getElementById('batchLedgerMc')?.value || '0';
+            batchSetHtml('batch-ledger-list', batchMsg('Loading batch ledger...'));
+            try {
+                const res = await fetch(`${batchBase('batch-ledger')}&batch=${encodeURIComponent(batchLedgerPick.batch)}&item=${batchLedgerPick.item}&mc=${encodeURIComponent(mc)}`);
+                const d = await res.json();
+                if (d.error) {
+                    ['batch-ledger-open', 'batch-ledger-in', 'batch-ledger-out', 'batch-ledger-close'].forEach(id => batchSetText(id, '0'));
+                    batchSetText('batch-ledger-info', '');
+                    if (d.need_item && (d.choices || []).length) {
+                        batchSetHtml('batch-ledger-list', batchMsg(d.error, 'text-amber-600') + d.choices.map(ch => `
+                            <div onclick="batchLedgerPickBatch(this.dataset.batch, ${Number(ch.ItemCode)}, this.dataset.name, 0)" data-batch="${batchEsc(d.batch)}" data-name="${batchEsc(ch.ItemName)}" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex justify-between cursor-pointer hover:border-busy-blue">
+                                <span class="text-xs font-bold text-slate-900">${batchEsc(ch.ItemName)}</span>
+                                <span class="text-xs font-black text-slate-700">${batchQty(ch.Closing)}</span>
+                            </div>`).join(''));
+                    } else {
+                        batchSetHtml('batch-ledger-list', batchMsg(d.error, 'text-rose-500'));
+                    }
+                    return;
+                }
+                const unit = d.item?.UnitName || '';
+                batchLedgerPick.itemName = d.item?.Name || batchLedgerPick.itemName;
+                batchSetText('batchLedgerPicked', `${d.batch} · ${batchLedgerPick.itemName}`);
+                batchSetText('batch-ledger-open', batchQty(d.opening));
+                batchSetText('batch-ledger-in', batchQty(d.total_in));
+                batchSetText('batch-ledger-out', batchQty(d.total_out));
+                batchSetText('batch-ledger-close', batchQty(d.closing));
+                batchSetText('batch-ledger-info', `${d.item?.Name || ''} · ${d.mc?.Name || 'All Material Centres'}${unit ? ' · Unit: ' + unit : ''}${d.batch_date ? ' · Batch date ' + d.batch_date : ''}`);
+                const descHtml = (d.descriptions || []).length ? `
+                    <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800"><b>Description:</b> ${d.descriptions.map(batchEsc).join(' | ')}</div>` : '';
+                const mcHtml = (!d.mc && (d.by_mc || []).length > 1) ? `
+                    <div class="p-2.5 bg-white border border-slate-200 rounded-xl text-[10px] space-y-0.5">
+                        ${d.by_mc.map(m => `<div class="flex justify-between"><span class="text-slate-500 truncate">${batchEsc(m.McName)}</span><span class="font-bold ${m.Closing ? 'text-slate-900' : 'text-slate-400'}">${batchQty(m.Closing)}</span></div>`).join('')}
+                    </div>` : '';
+                const rows = d.rows || [];
+                const body = rows.map(r => `
+                    <div class="p-3 ${r.IsOpening ? 'bg-slate-50' : 'bg-white'} border border-slate-200 rounded-xl shadow-2xs">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] text-slate-400">${batchEsc(r.Date)} · ${batchEsc(r.VchTypeName)}${r.VchNo ? ' · <span class="font-bold text-slate-600">' + batchEsc(r.VchNo) + '</span>' : ''}</div>
+                                <div class="text-xs font-bold text-slate-900 leading-tight truncate">${batchEsc(r.Party)}</div>
+                                <div class="text-[10px] text-slate-400 truncate">${batchEsc(r.McName)}${r.Description ? ' · ' + batchEsc(r.Description) : ''}</div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                ${r.In ? `<div class="text-xs font-black text-emerald-600">+${batchQty(r.In)}</div>` : ''}
+                                ${r.Out ? `<div class="text-xs font-black text-rose-600">-${batchQty(r.Out)}</div>` : ''}
+                                <div class="text-[10px] font-bold text-slate-500">Bal ${batchQty(r.Balance)}</div>
+                            </div>
+                        </div>
+                    </div>`).join('');
+                const closeRow = `
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between text-xs">
+                        <span class="font-bold text-slate-600">Closing Balance</span>
+                        <span class="font-black text-busy-blue">${batchQty(d.closing)} ${batchEsc(unit)}</span>
+                    </div>`;
+                batchSetHtml('batch-ledger-list', descHtml + mcHtml + (rows.length ? body : batchMsg('No movements')) + closeRow);
+            } catch (err) {
+                console.error('Batch ledger error:', err);
+                batchSetHtml('batch-ledger-list', batchMsg('Failed to load batch ledger', 'text-rose-500'));
+            }
+        }
+
+        // ---------- 3. Item-wise Batch Summary ----------
+        async function batchLoadItem() {
+            await batchEnsureMcList();
+            if (batchItemPick) {
+                batchItemLoadData();
+            } else {
+                batchSetHtml('batch-item-list', batchMsg('Search and select an item'));
+                batchSetHtml('batch-item-compare', '');
+            }
+        }
+
+        function batchItemOnSearch() {
+            clearTimeout(batchItemSearchTimer);
+            batchItemSearchTimer = setTimeout(batchItemSearchItems, 300);
+        }
+
+        async function batchItemSearchItems() {
+            const q = document.getElementById('batchItemSearch')?.value || '';
+            const box = document.getElementById('batchItemResults');
+            if (!box) return;
+            if (q.trim().length < 1) {
+                box.classList.add('hidden');
+                return;
+            }
+            try {
+                const res = await fetch(`${batchBase('batch-items')}&search=${encodeURIComponent(q.trim())}&limit=30`);
+                const data = await res.json();
+                const items = data.items || [];
+                box.innerHTML = items.length ? items.map(it => `
+                    <button type="button" onclick="batchItemPickItem(${Number(it.Code)}, this.dataset.name)" data-name="${batchEsc(it.Name)}"
+                        class="w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50">
+                        <div class="flex justify-between gap-2">
+                            <span class="text-xs font-bold text-slate-900">${batchEsc(it.Name)}</span>
+                            <span class="text-[11px] font-bold text-slate-600 shrink-0">${batchQty(it.BatchClosing)}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">${batchEsc(it.GroupName)} · ${Number(it.BatchNos) || 0} batch nos${it.UnitName ? ' · ' + batchEsc(it.UnitName) : ''}</div>
+                    </button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-400">No items with batches found</div>';
+                box.classList.remove('hidden');
+            } catch (err) {
+                console.error('Batch item search error:', err);
+            }
+        }
+
+        function batchItemPickItem(code, name) {
+            batchItemPick = { Code: Number(code) || 0, Name: name || '' };
+            batchSetText('batchItemName', name || '');
+            const box = document.getElementById('batchItemResults');
+            if (box) box.classList.add('hidden');
+            const inp = document.getElementById('batchItemSearch');
+            if (inp) inp.value = '';
+            batchItemLoadData();
+        }
+
+        async function batchItemLoadData() {
+            if (!batchItemPick) return;
+            const mc = document.getElementById('batchItemMc')?.value || '0';
+            batchSetHtml('batch-item-list', batchMsg('Loading batches...'));
+            try {
+                const res = await fetch(`${batchBase('batch-item-summary')}&item=${batchItemPick.Code}&mc=${encodeURIComponent(mc)}&hide_zero=0`);
+                batchItemData = await res.json();
+                batchItemRender();
+            } catch (err) {
+                console.error('Batch item summary error:', err);
+                batchSetHtml('batch-item-list', batchMsg('Failed to load item batches', 'text-rose-500'));
+            }
+        }
+
+        function batchItemRender() {
+            const d = batchItemData;
+            if (!d) return;
+            if (d.error) {
+                batchSetHtml('batch-item-list', batchMsg(d.error, 'text-rose-500'));
+                batchSetHtml('batch-item-compare', '');
+                return;
+            }
+            const q = (document.getElementById('batchItemFilter')?.value || '').trim().toLowerCase();
+            const hideZero = document.getElementById('batchItemHideZero')?.checked;
+            const rows = (d.batches || []).filter(b => (!hideZero || Math.abs(b.Closing) > 0.0005) &&
+                (!q || String(b.BatchNo).toLowerCase().includes(q) || (b.Descriptions || []).some(x => String(x).toLowerCase().includes(q))));
+            const sum = k => rows.reduce((s, b) => s + (Number(b[k]) || 0), 0);
+            batchSetText('batch-item-open', batchQty(sum('Opening')));
+            batchSetText('batch-item-in', batchQty(sum('In')));
+            batchSetText('batch-item-out', batchQty(sum('Out')));
+            batchSetText('batch-item-close', batchQty(sum('Closing')));
+            const s = d.stock || {};
+            const unit = d.item?.UnitName || '';
+            batchSetHtml('batch-item-compare', `
+                <div class="p-2.5 ${s.has_difference ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'} border rounded-xl text-[11px] space-y-0.5">
+                    <div class="flex justify-between"><span class="text-slate-500">Item stock (${batchEsc(d.mc?.Name || 'all MCs')})</span><b class="text-slate-900">${batchQty(s.stock_qty)} ${batchEsc(unit)}</b></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Batch closing (all batches)</span><b class="text-slate-900">${batchQty(s.batch_closing)} ${batchEsc(unit)}</b></div>
+                    <div class="flex justify-between"><span class="${s.has_difference ? 'text-amber-700 font-bold' : 'text-emerald-700'}">${s.has_difference ? 'Not batch-tracked' : 'Fully batch-tracked'}</span><b class="${s.has_difference ? 'text-amber-700' : 'text-emerald-700'}">${batchQty(s.not_batch_tracked)}</b></div>
+                    <div class="text-[10px] text-slate-400">${rows.length} of ${(d.batches || []).length} batches shown</div>
+                </div>`);
+            batchSetHtml('batch-item-list', rows.length ? rows.map(b => batchBatchRow(b,
+                `batchOpenItemLedger(this.dataset.batch)`)).join('') : batchMsg('No batches'));
+        }
+
+        function batchOpenItemLedger(batch) {
+            if (!batchItemPick) return;
+            const mc = document.getElementById('batchItemMc')?.value || '0';
+            const item = batchItemPick;
+            batchShowView('view-batch-ledger');
+            batchEnsureMcList().then(() => batchLedgerPickBatch(batch, item.Code, item.Name, Number(mc) || 0));
+        }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+batch-mcs|Batch Stock MC-wise|fa-solid fa-boxes-stacked|batchLoadMcs
+batch-ledger|Batch Ledger|fa-solid fa-barcode|batchLoadLedger
+batch-item|Item-wise Batch Summary|fa-solid fa-cubes|batchLoadItem
+<!-- /TILES -->

@@ -1,0 +1,575 @@
+<!-- Inventory report group: Item Stock Ledger, Item Group-wise Stock, Material Centre-wise Stock,
+     Pending Sales Orders / Purchase Orders / Delivery Challans / Purchase Challans.
+     Backend: reports_inventory.py (ROUTES). -->
+<!-- VIEWS -->
+            <!-- VIEW: INVENTORY - ITEM STOCK LEDGER -->
+            <div id="view-inventory-ledger" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Item Stock Ledger</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2">
+                    <div class="relative">
+                        <input type="text" id="inventoryLedgerItemSearch" oninput="inventoryLedgerOnSearch()" placeholder="Search item..." autocomplete="off" class="w-full bg-slate-100 border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <div id="inventoryLedgerItemResults" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg"></div>
+                    </div>
+                    <div id="inventoryLedgerItemName" class="text-[11px] font-bold text-busy-blue truncate">No item selected</div>
+                    <select id="inventoryLedgerMc" onchange="inventoryLoadLedgerData()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <option value="0">All Material Centres</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">From</div>
+                            <input type="date" id="inventoryLedgerFrom" onchange="inventoryLoadLedgerData()" class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5">
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase">To</div>
+                            <input type="date" id="inventoryLedgerTo" onchange="inventoryLoadLedgerData()" class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md grid grid-cols-4 gap-1 text-center">
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Opening</div>
+                        <div id="inventory-ledger-open" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-emerald-300 uppercase">In</div>
+                        <div id="inventory-ledger-in" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-rose-300 uppercase">Out</div>
+                        <div id="inventory-ledger-out" class="text-xs font-black">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-slate-300 uppercase">Closing</div>
+                        <div id="inventory-ledger-close" class="text-xs font-black">0</div>
+                    </div>
+                </div>
+                <div id="inventory-ledger-unit" class="text-[10px] text-slate-400 text-center"></div>
+
+                <div id="inventory-ledger-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Search and select an item</div>
+                </div>
+            </div>
+
+            <!-- VIEW: INVENTORY - ITEM GROUP-WISE STOCK -->
+            <div id="view-inventory-groups" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Item Group Stock</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div id="inventory-groups-path" class="flex flex-wrap items-center gap-1 text-[11px] font-bold text-busy-blue"></div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <div id="inventory-groups-title" class="text-[10px] text-slate-300 uppercase">All Item Groups</div>
+                        <div id="inventory-groups-val" class="text-lg font-black">₹0.00</div>
+                    </div>
+                    <div class="text-right">
+                        <div id="inventory-groups-qty" class="text-sm font-bold">0 Qty</div>
+                        <div id="inventory-groups-cnt" class="text-[10px] text-slate-300">0 Items</div>
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
+                    <input type="checkbox" id="inventoryGroupsHideZero" checked onchange="inventoryRenderGroups()">
+                    Hide items with zero stock
+                </label>
+
+                <div id="inventory-groups-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: INVENTORY - MATERIAL CENTRE-WISE STOCK -->
+            <div id="view-inventory-mcs" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span class="text-xs font-extrabold text-slate-800 uppercase">Godown-wise Stock</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div id="inventory-mcs-path" class="flex flex-wrap items-center gap-1 text-[11px] font-bold text-busy-blue"></div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <div id="inventory-mcs-title" class="text-[10px] text-slate-300 uppercase">All Material Centres</div>
+                        <div id="inventory-mcs-val" class="text-lg font-black">₹0.00</div>
+                    </div>
+                    <div class="text-right">
+                        <div id="inventory-mcs-qty" class="text-sm font-bold">0 Qty</div>
+                        <div id="inventory-mcs-cnt" class="text-[10px] text-slate-300">0</div>
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
+                    <input type="checkbox" id="inventoryMcsHideZero" checked onchange="inventoryRenderMcs()">
+                    Hide zero stock
+                </label>
+
+                <div id="inventory-mcs-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW: INVENTORY - PENDING ORDERS / CHALLANS -->
+            <div id="view-inventory-pending" class="hidden space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <button onclick="closeReportView()" class="flex items-center gap-1.5 text-xs font-bold text-busy-blue hover:text-busy-navy">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Back</span>
+                    </button>
+                    <span id="inventory-pending-heading" class="text-xs font-extrabold text-slate-800 uppercase">Pending Sales Orders</span>
+                    <span class="w-10"></span>
+                </div>
+
+                <div class="grid grid-cols-4 gap-1 text-[10px] font-bold">
+                    <button id="inventoryPendingTab-so" onclick="inventorySetPendingType('so')" class="py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600">Sales Ord</button>
+                    <button id="inventoryPendingTab-po" onclick="inventorySetPendingType('po')" class="py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600">Purch Ord</button>
+                    <button id="inventoryPendingTab-dc" onclick="inventorySetPendingType('dc')" class="py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600">Deliv Chln</button>
+                    <button id="inventoryPendingTab-pc" onclick="inventorySetPendingType('pc')" class="py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600">Purch Chln</button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="inventoryPendingSearch" oninput="inventoryPendingOnSearch()" placeholder="Party / item / vch no..." class="w-full bg-slate-100 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[9px] font-bold text-slate-400 uppercase">As on</div>
+                        <input type="date" id="inventoryPendingTo" onchange="inventoryLoadPendingData()" class="text-[11px] font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg px-1.5 py-1">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <div class="text-[10px] text-slate-300 uppercase">Pending Value</div>
+                        <div id="inventory-pending-val" class="text-lg font-black">₹0.00</div>
+                    </div>
+                    <div class="text-right">
+                        <div id="inventory-pending-qty" class="text-sm font-bold">0 Qty</div>
+                        <div id="inventory-pending-cnt" class="text-[10px] text-slate-300">0 Lines</div>
+                    </div>
+                </div>
+
+                <div id="inventory-pending-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Loading...</div>
+                </div>
+            </div>
+<!-- /VIEWS -->
+<!-- SCRIPT -->
+<script>
+        // ===================== Inventory reports (reports_inventory.py) =====================
+        let inventoryLedgerItem = null;          // {Code, Name}
+        let inventoryLedgerSearchTimer = null;
+        let inventoryMcListLoaded = '';
+        let inventoryGroupsData = null;
+        let inventoryGroupsCurrent = 0;
+        let inventoryMcsData = null;
+        let inventoryMcsCurrent = 0;
+        let inventoryPendingType = 'so';
+        let inventoryPendingData = null;
+        let inventoryPendingSearchTimer = null;
+
+        function inventoryEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+        function inventoryQty(n) {
+            return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 3 });
+        }
+        function inventoryAmt(n) {
+            return (Number(n || 0) < 0 ? '-' : '') + fmtINR(n);
+        }
+        function inventoryToday() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        function inventoryBase(path) {
+            return `/api/reports/${path}?company=${encodeURIComponent(currentCompany)}&fy=${encodeURIComponent(currentFY)}`;
+        }
+        function inventorySetText(id, txt) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = txt;
+        }
+        function inventorySetHtml(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+        function inventoryMsg(text, cls) {
+            return `<div class="text-center py-6 text-xs ${cls || 'text-slate-400'}">${inventoryEsc(text)}</div>`;
+        }
+
+        // ---------- 1. Item Stock Ledger ----------
+        async function inventoryLoadLedger() {
+            const fromEl = document.getElementById('inventoryLedgerFrom');
+            const toEl = document.getElementById('inventoryLedgerTo');
+            const ledgerCtx = `${currentCompany}|${currentFY}`;
+            if (fromEl && fromEl.dataset.ctx !== ledgerCtx) {  // company / FY changed: reset to its default period
+                fromEl.dataset.ctx = ledgerCtx;
+                fromEl.value = '';
+                if (toEl) toEl.value = '';
+            }
+            if (((fromEl && !fromEl.value) || (toEl && !toEl.value)) && typeof reportWeekRange === 'function') {
+                const r = await reportWeekRange();  // default: last 7 days of data
+                if (fromEl && !fromEl.value && r.from) fromEl.value = r.from;
+                if (toEl && !toEl.value && r.to) toEl.value = r.to;
+            }
+            if (fromEl && !fromEl.value) fromEl.value = `${currentFY}-04-01`;
+            if (toEl && !toEl.value) toEl.value = inventoryToday();
+            const key = `${currentCompany}|${currentFY}`;
+            if (inventoryMcListLoaded !== key) {
+                try {
+                    const res = await fetch(inventoryBase('inventory-mcs'));
+                    const data = await res.json();
+                    const sel = document.getElementById('inventoryLedgerMc');
+                    if (sel) {
+                        sel.innerHTML = '<option value="0">All Material Centres</option>' +
+                            (data.mcs || []).map(m => `<option value="${m.Code}">${inventoryEsc(m.Name)}</option>`).join('');
+                    }
+                    inventoryMcListLoaded = key;
+                    inventoryLedgerItem = null;
+                    inventorySetText('inventoryLedgerItemName', 'No item selected');
+                } catch (err) {
+                    console.error('Inventory MC list error:', err);
+                }
+            }
+            if (inventoryLedgerItem) {
+                inventoryLoadLedgerData();
+            } else {
+                inventorySetHtml('inventory-ledger-list', inventoryMsg('Search and select an item'));
+            }
+        }
+
+        function inventoryLedgerOnSearch() {
+            clearTimeout(inventoryLedgerSearchTimer);
+            inventoryLedgerSearchTimer = setTimeout(inventoryLedgerSearchItems, 300);
+        }
+
+        async function inventoryLedgerSearchItems() {
+            const q = document.getElementById('inventoryLedgerItemSearch')?.value || '';
+            const box = document.getElementById('inventoryLedgerItemResults');
+            if (!box) return;
+            if (q.trim().length < 1) {
+                box.classList.add('hidden');
+                return;
+            }
+            try {
+                const res = await fetch(`${inventoryBase('inventory-items')}&search=${encodeURIComponent(q)}&limit=30`);
+                const data = await res.json();
+                const items = data.items || [];
+                box.innerHTML = items.length ? items.map(it => `
+                    <button type="button" onclick="inventoryLedgerPickItem(${Number(it.Code)}, this.dataset.name)" data-name="${inventoryEsc(it.Name)}"
+                        class="w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-slate-50">
+                        <div class="text-xs font-bold text-slate-900">${inventoryEsc(it.Name)}</div>
+                        <div class="text-[10px] text-slate-400">${inventoryEsc(it.GroupName)} ${it.UnitName ? '· ' + inventoryEsc(it.UnitName) : ''}</div>
+                    </button>`).join('') : '<div class="px-3 py-2 text-xs text-slate-400">No items found</div>';
+                box.classList.remove('hidden');
+            } catch (err) {
+                console.error('Inventory item search error:', err);
+            }
+        }
+
+        function inventoryLedgerPickItem(code, name) {
+            inventoryLedgerItem = { Code: code, Name: name };
+            inventorySetText('inventoryLedgerItemName', name);
+            const box = document.getElementById('inventoryLedgerItemResults');
+            if (box) box.classList.add('hidden');
+            const inp = document.getElementById('inventoryLedgerItemSearch');
+            if (inp) inp.value = '';
+            inventoryLoadLedgerData();
+        }
+
+        // Open the ledger for an item from the group / MC drill-downs (shows the ledger view directly, no switchTab).
+        function inventoryOpenLedgerFor(code, name, mc) {
+            ['view-inventory-groups', 'view-inventory-mcs'].forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.classList.add('hidden');
+            });
+            const view = document.getElementById('view-inventory-ledger');
+            if (view) view.classList.remove('hidden');
+            inventoryLedgerItem = { Code: code, Name: name };
+            inventoryLoadLedger().then(() => {
+                const sel = document.getElementById('inventoryLedgerMc');
+                if (sel) sel.value = String(mc || 0);
+                inventorySetText('inventoryLedgerItemName', name);
+                inventoryLoadLedgerData();
+            });
+        }
+
+        async function inventoryLoadLedgerData() {
+            if (!inventoryLedgerItem) return;
+            const mc = document.getElementById('inventoryLedgerMc')?.value || '0';
+            const from = document.getElementById('inventoryLedgerFrom')?.value || `${currentFY}-04-01`;
+            const to = document.getElementById('inventoryLedgerTo')?.value || inventoryToday();
+            inventorySetHtml('inventory-ledger-list', inventoryMsg('Loading stock ledger...'));
+            try {
+                const res = await fetch(`${inventoryBase('inventory-stock-ledger')}&code=${inventoryLedgerItem.Code}&mc=${encodeURIComponent(mc)}&from=${from}&to=${to}`);
+                const d = await res.json();
+                if (d.error) {
+                    inventorySetHtml('inventory-ledger-list', inventoryMsg(d.error, 'text-rose-500'));
+                    return;
+                }
+                const unit = d.item?.UnitName || '';
+                inventorySetText('inventory-ledger-open', inventoryQty(d.opening_qty));
+                inventorySetText('inventory-ledger-in', inventoryQty(d.total_in));
+                inventorySetText('inventory-ledger-out', inventoryQty(d.total_out));
+                inventorySetText('inventory-ledger-close', inventoryQty(d.closing_qty));
+                inventorySetText('inventory-ledger-unit', `${d.item?.Name || ''} · ${d.mc_name || ''}${unit ? ' · Unit: ' + unit : ''} · ${d.from} to ${d.to}`);
+                const rows = d.rows || [];
+                const openRow = `
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between text-xs">
+                        <span class="font-bold text-slate-600">Opening Balance (${inventoryEsc(d.from)})</span>
+                        <span class="font-black text-slate-900">${inventoryQty(d.opening_qty)} ${inventoryEsc(unit)}</span>
+                    </div>`;
+                const body = rows.map(r => `
+                    <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] text-slate-400">${inventoryEsc(r.Date)} · ${inventoryEsc(r.VchTypeName)} · <span class="font-bold text-slate-600">${inventoryEsc(r.VchNo)}</span></div>
+                                <div class="text-xs font-bold text-slate-900 leading-tight truncate">${inventoryEsc(r.Particulars)}</div>
+                                <div class="text-[10px] text-slate-400 truncate">${inventoryEsc(r.MCName)}${r.Rate != null ? ' · Rate ' + fmtINR(r.Rate) : ''}</div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                ${r.InQty ? `<div class="text-xs font-black text-emerald-600">+${inventoryQty(r.InQty)}</div>` : ''}
+                                ${r.OutQty ? `<div class="text-xs font-black text-rose-600">-${inventoryQty(r.OutQty)}</div>` : ''}
+                                <div class="text-[10px] font-bold text-slate-500">Bal ${inventoryQty(r.Balance)}</div>
+                            </div>
+                        </div>
+                    </div>`).join('');
+                const closeRow = `
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between text-xs">
+                        <span class="font-bold text-slate-600">Closing Balance (${inventoryEsc(d.to)})</span>
+                        <span class="font-black text-busy-blue">${inventoryQty(d.closing_qty)} ${inventoryEsc(unit)}</span>
+                    </div>`;
+                inventorySetHtml('inventory-ledger-list', openRow + (rows.length ? body : inventoryMsg('No movements in this period')) + closeRow);
+            } catch (err) {
+                console.error('Inventory ledger error:', err);
+                inventorySetHtml('inventory-ledger-list', inventoryMsg('Failed to load stock ledger', 'text-rose-500'));
+            }
+        }
+
+        // ---------- 2. Item Group-wise Stock ----------
+        function inventoryLoadGroups() {
+            inventoryGroupsDrill(0);
+        }
+
+        async function inventoryGroupsDrill(code) {
+            inventoryGroupsCurrent = code;
+            inventorySetHtml('inventory-groups-list', inventoryMsg('Loading item groups...'));
+            try {
+                const res = await fetch(`${inventoryBase('inventory-group-stock')}&group=${Number(code) || 0}`);
+                inventoryGroupsData = await res.json();
+                inventoryRenderGroups();
+            } catch (err) {
+                console.error('Inventory group stock error:', err);
+                inventorySetHtml('inventory-groups-list', inventoryMsg('Failed to load group stock', 'text-rose-500'));
+            }
+        }
+
+        function inventoryRenderGroups() {
+            const d = inventoryGroupsData;
+            if (!d) return;
+            if (d.error) {
+                inventorySetHtml('inventory-groups-list', inventoryMsg(d.error, 'text-rose-500'));
+                return;
+            }
+            const t = d.totals || {};
+            inventorySetText('inventory-groups-title', d.group?.Name || 'All Item Groups');
+            inventorySetText('inventory-groups-val', inventoryAmt(t.closing_value));
+            inventorySetText('inventory-groups-qty', `${inventoryQty(t.closing_qty)} Qty`);
+            inventorySetText('inventory-groups-cnt', `${t.item_count || 0} Items · ${t.in_stock_count || 0} in stock`);
+            const crumbs = [`<button onclick="inventoryGroupsDrill(0)" class="hover:underline">All Groups</button>`]
+                .concat((d.path || []).map(p => `<i class="fa-solid fa-chevron-right text-[8px] text-slate-400"></i><button onclick="inventoryGroupsDrill(${Number(p.Code)})" class="hover:underline">${inventoryEsc(p.Name)}</button>`));
+            inventorySetHtml('inventory-groups-path', crumbs.join(''));
+            const hideZero = document.getElementById('inventoryGroupsHideZero')?.checked;
+            const groups = (d.sub_groups || []).filter(g => !hideZero || Math.abs(g.closing_qty) > 0.0005 || g.in_stock_count > 0);
+            const items = (d.items || []).filter(i => !hideZero || Math.abs(i.ClosingQty) > 0.0005);
+            const gHtml = groups.map(g => `
+                <div onclick="inventoryGroupsDrill(${Number(g.Code)})" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-busy-blue">
+                    <div class="flex-1 mr-2 min-w-0">
+                        <h4 class="text-xs font-bold text-slate-900 leading-tight truncate"><i class="fa-solid fa-folder text-amber-500 mr-1"></i>${inventoryEsc(g.Name)}</h4>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${g.item_count} items · ${g.in_stock_count} in stock${g.sub_group_count ? ' · ' + g.sub_group_count + ' sub-groups' : ''}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-black text-slate-900">${inventoryQty(g.closing_qty)} Qty</div>
+                        <div class="text-[10px] font-bold text-slate-500">${inventoryAmt(g.closing_value)}</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 ml-2"></i>
+                </div>`).join('');
+            const iHtml = items.map(it => `
+                <div onclick="inventoryOpenLedgerFor(${Number(it.Code)}, this.dataset.name, 0)" data-name="${inventoryEsc(it.Name)}" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer">
+                    <div class="flex-1 mr-2 min-w-0">
+                        <h4 class="text-xs font-bold text-slate-900 leading-tight">${inventoryEsc(it.Name)}</h4>
+                        <div class="text-[10px] text-slate-400 mt-0.5">Avg Rate: ${fmtINR(it.AvgRate)}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-black text-slate-900">${inventoryQty(it.ClosingQty)} ${inventoryEsc(it.UnitName)}</div>
+                        <div class="text-[10px] font-bold text-slate-500">${inventoryAmt(it.ClosingValue)}</div>
+                    </div>
+                </div>`).join('');
+            inventorySetHtml('inventory-groups-list', (gHtml + iHtml) || inventoryMsg('No stock in this group'));
+        }
+
+        // ---------- 3. Material Centre-wise Stock ----------
+        function inventoryLoadMcs() {
+            inventoryMcsDrill(0);
+        }
+
+        async function inventoryMcsDrill(code) {
+            inventoryMcsCurrent = Number(code) || 0;
+            inventorySetHtml('inventory-mcs-list', inventoryMsg('Loading material centres...'));
+            try {
+                const res = await fetch(`${inventoryBase('inventory-mc-stock')}&mc=${inventoryMcsCurrent}`);
+                inventoryMcsData = await res.json();
+                inventoryRenderMcs();
+            } catch (err) {
+                console.error('Inventory MC stock error:', err);
+                inventorySetHtml('inventory-mcs-list', inventoryMsg('Failed to load material centre stock', 'text-rose-500'));
+            }
+        }
+
+        function inventoryRenderMcs() {
+            const d = inventoryMcsData;
+            if (!d) return;
+            const t = d.totals || {};
+            const hideZero = document.getElementById('inventoryMcsHideZero')?.checked;
+            inventorySetText('inventory-mcs-val', inventoryAmt(t.closing_value));
+            inventorySetText('inventory-mcs-qty', `${inventoryQty(t.closing_qty)} Qty`);
+            if (inventoryMcsCurrent > 0) {
+                inventorySetText('inventory-mcs-title', d.mc?.Name || 'Material Centre');
+                inventorySetText('inventory-mcs-cnt', `${t.in_stock_count || 0} items in stock`);
+                inventorySetHtml('inventory-mcs-path', `<button onclick="inventoryMcsDrill(0)" class="hover:underline"><i class="fa-solid fa-arrow-left text-[9px] mr-1"></i>All Material Centres</button>`);
+                const items = (d.items || []).filter(i => !hideZero || Math.abs(i.ClosingQty) > 0.0005);
+                inventorySetHtml('inventory-mcs-list', items.length ? items.map(it => `
+                    <div onclick="inventoryOpenLedgerFor(${Number(it.Code)}, this.dataset.name, ${inventoryMcsCurrent})" data-name="${inventoryEsc(it.Name)}" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer">
+                        <div class="flex-1 mr-2 min-w-0">
+                            <h4 class="text-xs font-bold text-slate-900 leading-tight">${inventoryEsc(it.Name)}</h4>
+                            <div class="text-[10px] text-slate-400 mt-0.5">Avg Rate: ${fmtINR(it.AvgRate)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-black text-slate-900">${inventoryQty(it.ClosingQty)} ${inventoryEsc(it.UnitName)}</div>
+                            <div class="text-[10px] font-bold text-slate-500">${inventoryAmt(it.ClosingValue)}</div>
+                        </div>
+                    </div>`).join('') : inventoryMsg('No stock in this material centre'));
+                return;
+            }
+            inventorySetText('inventory-mcs-title', 'All Material Centres');
+            inventorySetText('inventory-mcs-cnt', `${t.mc_count || 0} Material Centres`);
+            inventorySetHtml('inventory-mcs-path', '');
+            const mcs = (d.mcs || []).filter(m => !hideZero || Math.abs(m.closing_qty) > 0.0005 || m.in_stock_count > 0);
+            inventorySetHtml('inventory-mcs-list', mcs.length ? mcs.map(m => `
+                <div onclick="inventoryMcsDrill(${Number(m.Code)})" class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-busy-blue">
+                    <div class="flex-1 mr-2 min-w-0">
+                        <h4 class="text-xs font-bold text-slate-900 leading-tight truncate"><i class="fa-solid fa-warehouse text-slate-400 mr-1"></i>${inventoryEsc(m.Name)}</h4>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${inventoryEsc(m.GroupName)} · ${m.in_stock_count} items in stock</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-black text-slate-900">${inventoryQty(m.closing_qty)} Qty</div>
+                        <div class="text-[10px] font-bold text-slate-500">${inventoryAmt(m.closing_value)}</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 ml-2"></i>
+                </div>`).join('') : inventoryMsg('No material centres with stock'));
+        }
+
+        // ---------- 4. Pending Orders / Challans ----------
+        function inventoryLoadPendingSO() { inventorySetPendingType('so'); }
+        function inventoryLoadPendingPO() { inventorySetPendingType('po'); }
+        function inventoryLoadPendingDC() { inventorySetPendingType('dc'); }
+        function inventoryLoadPendingPC() { inventorySetPendingType('pc'); }
+
+        function inventorySetPendingType(type) {
+            inventoryPendingType = type;
+            ['so', 'po', 'dc', 'pc'].forEach(k => {
+                const b = document.getElementById('inventoryPendingTab-' + k);
+                if (!b) return;
+                b.className = 'py-1.5 rounded-lg border ' + (k === type
+                    ? 'border-busy-blue bg-busy-blue text-white'
+                    : 'border-slate-300 bg-white text-slate-600');
+            });
+            const toEl = document.getElementById('inventoryPendingTo');
+            if (toEl && !toEl.value) toEl.value = inventoryToday();
+            inventoryLoadPendingData();
+        }
+
+        function inventoryPendingOnSearch() {
+            clearTimeout(inventoryPendingSearchTimer);
+            inventoryPendingSearchTimer = setTimeout(inventoryRenderPending, 250);
+        }
+
+        async function inventoryLoadPendingData() {
+            const to = document.getElementById('inventoryPendingTo')?.value || inventoryToday();
+            inventorySetHtml('inventory-pending-list', inventoryMsg('Loading pending list...'));
+            try {
+                const res = await fetch(`${inventoryBase('inventory-pending')}&type=${inventoryPendingType}&to=${to}`);
+                inventoryPendingData = await res.json();
+                inventorySetText('inventory-pending-heading', inventoryPendingData.title || 'Pending');
+                inventoryRenderPending();
+            } catch (err) {
+                console.error('Inventory pending error:', err);
+                inventorySetHtml('inventory-pending-list', inventoryMsg('Failed to load pending list', 'text-rose-500'));
+            }
+        }
+
+        function inventoryRenderPending() {
+            const d = inventoryPendingData;
+            if (!d) return;
+            const q = (document.getElementById('inventoryPendingSearch')?.value || '').trim().toLowerCase();
+            const rows = (d.rows || []).filter(r => !q ||
+                [r.PartyName, r.ItemName, r.VchNo].some(v => String(v || '').toLowerCase().includes(q)));
+            const pq = rows.reduce((s, r) => s + (r.PendingQty || 0), 0);
+            const pv = rows.reduce((s, r) => s + (r.PendingValue || 0), 0);
+            inventorySetText('inventory-pending-val', inventoryAmt(pv));
+            inventorySetText('inventory-pending-qty', `${inventoryQty(pq)} Qty`);
+            inventorySetText('inventory-pending-cnt', `${rows.length} Lines`);
+            if (!rows.length) {
+                inventorySetHtml('inventory-pending-list', inventoryMsg('Nothing pending'));
+                return;
+            }
+            inventorySetHtml('inventory-pending-list', rows.map(r => `
+                <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[10px] text-slate-400">${inventoryEsc(r.Date)} · ${inventoryEsc(r.VchTypeName)} · <span class="font-bold text-slate-600">${inventoryEsc(r.VchNo)}</span></div>
+                            <div class="text-xs font-bold text-slate-900 leading-tight truncate">${inventoryEsc(r.PartyName)}</div>
+                            <div class="text-[11px] text-slate-600 leading-tight">${inventoryEsc(r.ItemName)}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-xs font-black text-amber-600">${inventoryQty(r.PendingQty)} ${inventoryEsc(r.UnitName)}</div>
+                            <div class="text-[10px] font-bold text-slate-500">${r.PendingValue != null ? inventoryAmt(r.PendingValue) : ''}</div>
+                        </div>
+                    </div>
+                    <div class="mt-1.5 grid grid-cols-3 gap-1 text-[10px] text-center">
+                        <div class="bg-slate-50 rounded-md py-0.5"><span class="text-slate-400">Ord</span> <b class="text-slate-700">${inventoryQty(r.OrderedQty)}</b></div>
+                        <div class="bg-slate-50 rounded-md py-0.5"><span class="text-slate-400">Adj</span> <b class="text-slate-700">${inventoryQty(r.AdjustedQty)}</b></div>
+                        <div class="bg-slate-50 rounded-md py-0.5"><span class="text-slate-400">Rate</span> <b class="text-slate-700">${r.Rate != null ? fmtINR(r.Rate) : '-'}</b></div>
+                    </div>
+                    ${(r.Adjustments || []).length ? `<div class="mt-1 text-[10px] text-slate-400">${r.Adjustments.map(a => `${inventoryEsc(a.Date)} ${inventoryEsc(a.VchTypeName)} ${inventoryEsc(a.VchNo)}: ${inventoryQty(a.Qty)}`).join('<br>')}</div>` : ''}
+                </div>`).join(''));
+        }
+</script>
+<!-- /SCRIPT -->
+<!-- TILES -->
+inventory-ledger|Item Stock Ledger|fa-solid fa-book-open|inventoryLoadLedger
+inventory-groups|Item Group Stock|fa-solid fa-layer-group|inventoryLoadGroups
+inventory-mcs|Godown-wise Stock|fa-solid fa-warehouse|inventoryLoadMcs
+inventory-pending|Pending Sales Orders|fa-solid fa-cart-arrow-down|inventoryLoadPendingSO
+inventory-pending|Pending Purchase Orders|fa-solid fa-truck-ramp-box|inventoryLoadPendingPO
+inventory-pending|Pending Delivery Challans|fa-solid fa-truck-fast|inventoryLoadPendingDC
+inventory-pending|Pending Purchase Challans|fa-solid fa-dolly|inventoryLoadPendingPC
+<!-- /TILES -->

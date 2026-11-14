@@ -1,0 +1,51 @@
+# ---- Data: never publish (real business data) ----
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.db.bak*
+*.bds
+*.BDS
+*.csv
+*.tsv
+
+# ---- Secrets ----
+.app_secret
+.env
+.env.*
+*.keystore
+*.jks
+*.pem
+bds_password.dat
+
+# ---- Vendor / patched third-party app: not ours to publish ----
+apk_project/
+*.apk
+*.idsig
+apktool.jar
+build_apk.js
+busy_apk_compat.py
+BusyMobileWeb/*.apk
+
+# ---- Old sync tool (replaced by bds_sync.py) ----
+BusyLocalSync/
+
+# ---- Local dev / build noise ----
+__pycache__/
+*.pyc
+*.exe
+.claude/
+node_modules/
+.vscode/
+.idea/
+
+# ---- scratch: only keep the maintained tools and tests ----
+scratch/*
+!scratch/report_ui/
+!scratch/integrate_reports.py
+!scratch/report_modules_contract.md
+!scratch/validate_syntax.js
+!scratch/test_all_home_buttons.js
+!scratch/test_reports_*.py
+!scratch/compare_sync_db.py
+!scratch/print_dash_values.py
