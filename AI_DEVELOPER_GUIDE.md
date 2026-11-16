@@ -94,6 +94,7 @@ node scratch/validate_syntax.js
 - App-created masters/vouchers (codes above BUSY's highest) survive a re-sync; BUSY rows are replaced.
 - Every per-year table has `fy_year`; **every query must filter `company_code` AND `fy_year`** (VchCode / Code repeat across years). `/api/fys` lists a company's years; a missing `fy` param means the latest year. Never hardcode a year or a company code.
 - To add a company: add its folder name (e.g. `COMP0011`) to `bds_sync_config.json` and run a sync.
+- BUSY SQL edition: `"mssql": {server, auth, user, companies}` in the config. Databases `BusyCompNNNN_db` (company) and `BusyCompNNNN_db1YYYY` (FY) are discovered automatically; company_code becomes `BusyCompNNNN` (never clashes with BDS `COMPNNNN`). Same tables and queries as BDS; changes detected with `CHECKSUM_AGG(BINARY_CHECKSUM(*))` per table (`busy_sync_state.fingerprint`).
 
 ## 3b. BUSY "Display" Reports (reports_*.py)
 - `reports_accounts.py`, `reports_inventory.py`, `reports_analysis.py`, `reports_gst.py` each export `ROUTES = {path: handler(conn, company, fy, params) -> dict}`; `server.py` loads them into `REPORT_ROUTES` (a broken module is skipped, never fatal).

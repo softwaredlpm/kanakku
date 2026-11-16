@@ -26,10 +26,12 @@ import tempfile
 import threading
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(BASE_DIR, 'bds_sync_config.json')
-DEFAULT_DB = os.path.join(BASE_DIR, 'busy_local.db')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))           # code + bundled exporter
+DATA_DIR = os.environ.get('KANAKKU_HOME') or BASE_DIR            # config + database (Kanakku.exe: %LOCALAPPDATA%\Kanakku)
+CONFIG_PATH = os.path.join(DATA_DIR, 'bds_sync_config.json')
+DEFAULT_DB = os.path.join(DATA_DIR, 'busy_local.db')
 EXPORTER = os.path.join(BASE_DIR, 'bds_sync_export.ps1')
+NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)           # no PowerShell console flashing from the GUI app
 YEAR_FILE = re.compile(r'^db1(\d{4})\.bds$', re.I)
 csv.field_size_limit(2 ** 31 - 1)
 _LOCK = threading.Lock()
@@ -123,7 +125,7 @@ COMPANY_QUERIES = [('company', ["SELECT TOP 1 Name, PrintName, GSTNo, BDEPID, BD
 
 
 def load_config():
-    with open(CONFIG_PATH, encoding='utf-8') as f:
+    with open(CONFIG_PATH, encoding='utf-8-sig') as f:  # accept a BOM (Notepad / PowerShell 5)
         return json.load(f)
 
 
@@ -137,6 +139,9 @@ def ensure_schema(conn):
     _migrate_add_fy(conn, 'busy_billingdet')
     _migrate_add_fy(conn, 'busy_vchotherinfo')
     conn.executescript(SCHEMA)
+    if 'fingerprint' not in [r[1] for r in conn.execute('PRAGMA table_info(busy_sync_state)')]:
+        conn.execute('ALTER TABLE busy_sync_state ADD COLUMN fingerprint TEXT')  # SQL-source change detector
+        conn.commit()
 
 
 def _migrate_add_fy(conn, table):
@@ -206,13 +211,24 @@ def dmy_time(v):
         return v
 
 
-def export(bds_path, queries, out_dir):
+def source_args(source):
+    """Exporter arguments for a source: a BDS file path (str) or {'sql': mssql_cfg, 'db': database_name}."""
+    if isinstance(source, str):
+        return ['-Bds', source]
+    sql = source['sql']
+    args = ['-SqlServer', sql['server'], '-SqlDatabase', source['db'], '-SqlAuth', sql.get('auth', 'windows')]
+    if sql.get('user'):
+        args += ['-SqlUser', sql['user']]
+    return args
+
+
+def export(source, queries, out_dir):
     qfile = os.path.join(out_dir, '_queries.json')
     with open(qfile, 'w', encoding='utf-8') as fh:
         json.dump([{'name': n, 'sql': sql} for n, sql in queries], fh)
     res = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', EXPORTER,
-                          '-Bds', bds_path, '-QueryFile', qfile, '-OutDir', out_dir],
-                         capture_output=True, text=True, timeout=3600)
+                          *source_args(source), '-QueryFile', qfile, '-OutDir', out_dir],
+                         capture_output=True, text=True, timeout=3600, creationflags=NO_WINDOW)
     if res.returncode != 0:
         raise RuntimeError((res.stderr or res.stdout or 'export failed').strip()[-800:])
     errors = {}
@@ -339,12 +355,14 @@ def load_year(conn, comp, fy, d):
     return counts
 
 
-def sync_company_profile(conn, comp, comp_dir):
-    main = next((os.path.join(comp_dir, n) for n in os.listdir(comp_dir) if n.lower() == 'db.bds'), None)
-    if not main:
+def sync_company_profile(conn, comp, comp_dir=None, source=None):
+    """Company name / GSTIN from BUSY's company database (db.bds, or BusyCompNNNN_db on SQL)."""
+    if source is None:
+        source = next((os.path.join(comp_dir, n) for n in os.listdir(comp_dir) if n.lower() == 'db.bds'), None)
+    if not source:
         return
     with tempfile.TemporaryDirectory(prefix='busy_sync_') as d:
-        export(main, COMPANY_QUERIES, d)
+        export(source, COMPANY_QUERIES, d)
         rows = list(read_tsv(os.path.join(d, 'company.tsv'))) if os.path.exists(os.path.join(d, 'company.tsv')) else []
     if not rows:
         return
@@ -369,57 +387,144 @@ def year_files(comp_dir):
     return out
 
 
-def sync_all(db_path=DEFAULT_DB, force=False, only_company=None, only_fy=None, log=print):
-    """Sync every configured company and year that changed. Returns a list of per-year results."""
+# BUSY SQL edition names its databases like the BDS files: BusyComp0001_db (company) and BusyComp0001_db12025 (FY 2025-26)
+SQL_DB_NAME = re.compile(r'^(BusyComp\d{4})_db(?:1(\d{4}))?$', re.I)
+SQL_LIST_DBS = [('dbs', ["SELECT name FROM sys.databases WHERE name LIKE 'BusyComp%[_]db%' AND state_desc = 'ONLINE' ORDER BY name"])]
+# Cheap change detector for a SQL year database (no file timestamp to look at): row counts + aggregate checksums
+SQL_FINGERPRINT = [('fp', ["SELECT "
+    "(SELECT COUNT_BIG(*) FROM Tran1) AS t1n, (SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Tran1) AS t1c, "
+    "(SELECT COUNT_BIG(*) FROM Tran2) AS t2n, (SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Tran2) AS t2c, "
+    "(SELECT COUNT_BIG(*) FROM Tran3) AS t3n, (SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Tran3) AS t3c, "
+    "(SELECT COUNT_BIG(*) FROM Master1) AS m1n, (SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Master1) AS m1c, "
+    "(SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Folio1) AS f1c, (SELECT CHECKSUM_AGG(BINARY_CHECKSUM(*)) FROM Tran4) AS t4c"])]
+
+
+def _state(conn, comp, fy):
+    return conn.execute('SELECT file_size, file_mtime, status, fingerprint FROM busy_sync_state WHERE company_code = ? AND fy_year = ?',
+                        (comp, fy)).fetchone()
+
+
+def _sync_year(conn, comp, fy, source, label, log, size=0, mtime=0.0, fingerprint=''):
+    """Read one BUSY year (BDS file or SQL database) and load it. Returns a result dict."""
+    started = datetime.now()
+    log(f'{comp} FY {fy}: reading {label}')
+    status, detail = 'ok', ''
+    try:
+        with tempfile.TemporaryDirectory(prefix='busy_sync_') as d:
+            errors = export(source, FY_QUERIES, d)
+            missing = REQUIRED & set(errors)
+            if missing:
+                raise RuntimeError(f'required tables failed: {", ".join(sorted(missing))}: {errors[sorted(missing)[0]]}')
+            counts = load_year(conn, comp, fy, d)
+        detail = json.dumps({'rows': counts, 'skipped': errors, 'seconds': round((datetime.now() - started).total_seconds(), 1)})
+        log(f'{comp} FY {fy}: ok {counts}' + (f' (skipped: {list(errors)})' if errors else ''))
+    except Exception as e:  # noqa: BLE001
+        status, detail = 'error', str(e)[:1000]
+        log(f'{comp} FY {fy}: ERROR {e}')
+    conn.execute('''INSERT OR REPLACE INTO busy_sync_state (company_code, fy_year, file_path, file_size, file_mtime, synced_at,
+                    status, detail, fingerprint) VALUES (?,?,?,?,?,?,?,?,?)''',
+                 (comp, fy, label, size, mtime, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status, detail, fingerprint))
+    conn.commit()
+    return {'company': comp, 'fy': fy, 'status': status, 'detail': detail}
+
+
+def _sync_bds(conn, cfg, force, only_company, only_fy, log):
+    results = []
+    for comp in cfg.get('companies', []):
+        if only_company and comp != only_company:
+            continue
+        comp_dir = os.path.join(cfg['bds_root'], comp)
+        if not os.path.isdir(comp_dir):
+            log(f'{comp}: folder not found {comp_dir}')
+            results.append({'company': comp, 'status': 'missing folder'})
+            continue
+        try:
+            sync_company_profile(conn, comp, comp_dir=comp_dir)
+        except Exception as e:  # noqa: BLE001
+            log(f'{comp}: company profile failed: {e}')
+        for fy, path in year_files(comp_dir):
+            if only_fy and fy != only_fy:
+                continue
+            st = os.stat(path)
+            prev = _state(conn, comp, fy)
+            if not force and prev and prev[0] == st.st_size and abs((prev[1] or 0) - st.st_mtime) < 1 and prev[2] == 'ok':
+                results.append({'company': comp, 'fy': fy, 'status': 'unchanged'})
+                continue
+            results.append(_sync_year(conn, comp, fy, path, f'{path} ({st.st_size // 1048576} MB)', log,
+                                      size=st.st_size, mtime=st.st_mtime))
+    return results
+
+
+def discover_sql(sql_cfg):
+    """{company_code: {'main': db or None, 'years': {fy: db}}} for the BUSY databases on a SQL Server."""
+    with tempfile.TemporaryDirectory(prefix='busy_sync_') as d:
+        export({'sql': sql_cfg, 'db': 'master'}, SQL_LIST_DBS, d)
+        names = [r['name'] for r in read_tsv(os.path.join(d, 'dbs.tsv'))] if os.path.exists(os.path.join(d, 'dbs.tsv')) else []
+    found = {}
+    for name in names:
+        m = SQL_DB_NAME.match(name)
+        if not m:
+            continue
+        comp = m.group(1)[0].upper() + m.group(1)[1:]  # BusyComp0001
+        entry = found.setdefault(comp, {'main': None, 'years': {}})
+        if m.group(2):
+            entry['years'][int(m.group(2))] = name
+        else:
+            entry['main'] = name
+    return found
+
+
+def _sync_mssql(conn, sql_cfg, force, only_company, only_fy, log):
+    results = []
+    wanted = set(sql_cfg.get('companies') or [])
+    try:
+        found = discover_sql(sql_cfg)
+    except Exception as e:  # noqa: BLE001
+        log(f"SQL {sql_cfg.get('server')}: {e}")
+        return [{'company': f"sql:{sql_cfg.get('server')}", 'status': 'error', 'detail': str(e)[:500]}]
+    for comp, entry in sorted(found.items()):
+        if (wanted and comp not in wanted) or (only_company and comp != only_company):
+            continue
+        if entry['main']:
+            try:
+                sync_company_profile(conn, comp, source={'sql': sql_cfg, 'db': entry['main']})
+            except Exception as e:  # noqa: BLE001
+                log(f'{comp}: company profile failed: {e}')
+        for fy, db in sorted(entry['years'].items()):
+            if only_fy and fy != only_fy:
+                continue
+            source = {'sql': sql_cfg, 'db': db}
+            try:
+                with tempfile.TemporaryDirectory(prefix='busy_sync_') as d:
+                    export(source, SQL_FINGERPRINT, d)
+                    fp_rows = list(read_tsv(os.path.join(d, 'fp.tsv'))) if os.path.exists(os.path.join(d, 'fp.tsv')) else []
+                fingerprint = json.dumps(fp_rows[0], sort_keys=True) if fp_rows else ''
+            except Exception as e:  # noqa: BLE001
+                fingerprint = ''
+                log(f'{comp} FY {fy}: fingerprint failed ({e}); doing a full read')
+            prev = _state(conn, comp, fy)
+            if not force and fingerprint and prev and prev[2] == 'ok' and prev[3] == fingerprint:
+                results.append({'company': comp, 'fy': fy, 'status': 'unchanged'})
+                continue
+            results.append(_sync_year(conn, comp, fy, source, f"mssql://{sql_cfg['server']}/{db}", log, fingerprint=fingerprint))
+    return results
+
+
+def sync_all(db_path=DEFAULT_DB, force=False, only_company=None, only_fy=None, log=print, config=None):
+    """Sync every configured company and year that changed (BDS files and/or a BUSY SQL Server).
+    Returns a list of per-year results."""
     if not _LOCK.acquire(blocking=False):
         log('sync already running')
         return [{'status': 'busy'}]
     results = []
     try:
-        cfg = load_config()
+        cfg = config or load_config()
         conn = connect(db_path)
         ensure_schema(conn)
-        for comp in cfg.get('companies', []):
-            if only_company and comp != only_company:
-                continue
-            comp_dir = os.path.join(cfg['bds_root'], comp)
-            if not os.path.isdir(comp_dir):
-                log(f'{comp}: folder not found {comp_dir}')
-                results.append({'company': comp, 'status': 'missing folder'})
-                continue
-            try:
-                sync_company_profile(conn, comp, comp_dir)
-            except Exception as e:  # noqa: BLE001
-                log(f'{comp}: company profile failed: {e}')
-            for fy, path in year_files(comp_dir):
-                if only_fy and fy != only_fy:
-                    continue
-                st = os.stat(path)
-                prev = conn.execute('SELECT file_size, file_mtime, status FROM busy_sync_state WHERE company_code = ? AND fy_year = ?',
-                                    (comp, fy)).fetchone()
-                if not force and prev and prev[0] == st.st_size and abs((prev[1] or 0) - st.st_mtime) < 1 and prev[2] == 'ok':
-                    results.append({'company': comp, 'fy': fy, 'status': 'unchanged'})
-                    continue
-                started = datetime.now()
-                log(f'{comp} FY {fy}: reading {os.path.basename(path)} ({st.st_size // 1048576} MB)')
-                status, detail = 'ok', ''
-                try:
-                    with tempfile.TemporaryDirectory(prefix='busy_sync_') as d:
-                        errors = export(path, FY_QUERIES, d)
-                        missing = REQUIRED & set(errors)
-                        if missing:
-                            raise RuntimeError(f'required tables failed: {", ".join(sorted(missing))}: {errors[sorted(missing)[0]]}')
-                        counts = load_year(conn, comp, fy, d)
-                    detail = json.dumps({'rows': counts, 'skipped': errors, 'seconds': round((datetime.now() - started).total_seconds(), 1)})
-                    log(f'{comp} FY {fy}: ok {counts}' + (f' (skipped: {list(errors)})' if errors else ''))
-                except Exception as e:  # noqa: BLE001
-                    status, detail = 'error', str(e)[:1000]
-                    log(f'{comp} FY {fy}: ERROR {e}')
-                conn.execute('''INSERT OR REPLACE INTO busy_sync_state (company_code, fy_year, file_path, file_size, file_mtime,
-                                synced_at, status, detail) VALUES (?,?,?,?,?,?,?,?)''',
-                             (comp, fy, path, st.st_size, st.st_mtime, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), status, detail))
-                conn.commit()
-                results.append({'company': comp, 'fy': fy, 'status': status, 'detail': detail})
+        if cfg.get('bds_root') and cfg.get('companies'):
+            results += _sync_bds(conn, cfg, force, only_company, only_fy, log)
+        if cfg.get('mssql') and cfg['mssql'].get('server'):
+            results += _sync_mssql(conn, cfg['mssql'], force, only_company, only_fy, log)
         conn.close()
     finally:
         _LOCK.release()
@@ -445,7 +550,11 @@ if __name__ == '__main__':
     db = opt('--db') or DEFAULT_DB
     if opt('--copy-app-tables-from'):
         copy_app_tables(opt('--copy-app-tables-from'), db)
+    cfg = None
+    if opt('--config'):
+        with open(opt('--config'), encoding='utf-8-sig') as fh:
+            cfg = json.load(fh)
     res = sync_all(db, force='--force' in args, only_company=opt('--company'),
-                   only_fy=int(opt('--fy')) if opt('--fy') else None)
+                   only_fy=int(opt('--fy')) if opt('--fy') else None, config=cfg)
     bad = [r for r in res if r.get('status') == 'error']
     sys.exit(1 if bad else 0)

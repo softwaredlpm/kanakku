@@ -839,23 +839,18 @@
                     </div>
                 </div>
 
+                <!-- Signed-in account: sign out, change password, users (admin) -->
+                <div id="accountCard" class="p-3.5 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2 text-xs"></div>
+
                 <div class="p-3.5 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-2.5 text-xs">
-                    <div class="font-bold text-slate-800 border-b border-slate-100 pb-2">Sync & Server Status</div>
+                    <div class="font-bold text-slate-800 border-b border-slate-100 pb-2">Sync Status</div>
                     <div class="flex justify-between text-slate-600">
-                        <span>Connected Host:</span>
-                        <strong class="font-mono text-slate-800">Local BDS Sync Daemon</strong>
+                        <span>Source:</span>
+                        <strong class="text-slate-800">BUSY data files (read-only)</strong>
                     </div>
                     <div class="flex justify-between text-slate-600">
-                        <span>Target Backend:</span>
-                        <strong class="text-emerald-700">Supabase + Vercel Ready</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Sync Frequency:</span>
-                        <strong>Live Auto-Sync</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Read Mode:</span>
-                        <span class="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded text-[10px]">100% Read-Only Safety</span>
+                        <span>Last data sync:</span>
+                        <strong id="more-last-sync" class="text-slate-800">-</strong>
                     </div>
                 </div>
             </div>
@@ -2429,6 +2424,319 @@
 
     </div>
 
+    <!-- AUTH: first-run setup / login screen -->
+    <div id="authScreen" class="hidden fixed inset-0 z-[100] bg-[#EEF4FF] overflow-y-auto p-4">
+        <div class="w-full max-w-sm mx-auto my-6 bg-white rounded-2xl shadow-xl border border-blue-100 p-5 space-y-4">
+            <div class="text-center space-y-1">
+                <div class="text-2xl font-black text-busy-navy">Kanakku</div>
+                <div id="authSubtitle" class="text-xs text-slate-500">Sign in to see your accounts</div>
+            </div>
+            <form id="authForm" onsubmit="submitAuthForm(event)" class="space-y-3" autocomplete="on">
+                <div id="authDisplayNameRow" class="hidden">
+                    <label class="text-[11px] font-bold text-slate-600 block mb-0.5">Your name</label>
+                    <input id="authDisplayName" type="text" autocomplete="name" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-slate-600 block mb-0.5">Username</label>
+                    <input id="authUsername" type="text" autocomplete="username" autocapitalize="none" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-slate-600 block mb-0.5">Password</label>
+                    <input id="authPassword" type="password" autocomplete="current-password" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                </div>
+                <div id="authConfirmRow" class="hidden">
+                    <label class="text-[11px] font-bold text-slate-600 block mb-0.5">Repeat password</label>
+                    <input id="authPassword2" type="password" autocomplete="new-password" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-busy-blue">
+                </div>
+                <div id="authError" class="hidden text-xs font-semibold text-rose-600"></div>
+                <button id="authSubmit" type="submit" class="w-full bg-busy-blue hover:bg-busy-navy text-white font-bold py-2.5 rounded-lg text-sm shadow transition active:scale-95">Sign in</button>
+            </form>
+            <div id="authSetupNote" class="hidden text-[11px] text-slate-500 leading-snug">
+                First run: create the administrator account. You can add more users afterwards from <b>More &rsaquo; Users</b>.
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH: user management (admin) -->
+    <div id="usersModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-end sm:items-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-md max-h-[90vh] rounded-t-2xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-3.5 bg-busy-navy text-white flex justify-between items-center">
+                <div class="text-xs font-bold">Users</div>
+                <button onclick="closeUsersModal()" class="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="overflow-y-auto p-3 space-y-3">
+                <div id="usersList" class="space-y-2"></div>
+                <form id="userForm" onsubmit="saveUserForm(event)" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                    <div id="userFormTitle" class="font-bold text-slate-800">Add user</div>
+                    <input type="hidden" id="userFormId">
+                    <input id="userFormUsername" placeholder="Username" autocapitalize="none" class="w-full bg-white border border-slate-300 rounded-lg p-2">
+                    <input id="userFormName" placeholder="Display name" class="w-full bg-white border border-slate-300 rounded-lg p-2">
+                    <input id="userFormPassword" type="password" placeholder="Password (min 8)" autocomplete="new-password" class="w-full bg-white border border-slate-300 rounded-lg p-2">
+                    <div class="flex items-center gap-3">
+                        <label class="font-semibold text-slate-600">Role</label>
+                        <select id="userFormRole" onchange="renderUserCompanyBoxes()" class="bg-white border border-slate-300 rounded-lg p-1.5">
+                            <option value="user">User (selected companies)</option>
+                            <option value="admin">Admin (all companies, manage users)</option>
+                        </select>
+                    </div>
+                    <div id="userFormCompanies" class="space-y-1"></div>
+                    <label class="flex items-center gap-2"><input type="checkbox" id="userFormActive" checked> Active</label>
+                    <div id="userFormError" class="hidden text-rose-600 font-semibold"></div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 bg-busy-blue text-white font-bold py-2 rounded-lg">Save</button>
+                        <button type="button" onclick="resetUserForm()" class="px-3 bg-white border border-slate-300 font-bold py-2 rounded-lg">New</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH: change own password -->
+    <div id="passwordModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-center items-end sm:items-center p-0 sm:p-4">
+        <form onsubmit="submitPasswordChange(event)" class="bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl p-4 space-y-2 text-xs">
+            <div class="flex justify-between items-center">
+                <div class="font-bold text-slate-800 text-sm">Change password</div>
+                <button type="button" onclick="closePasswordModal()" class="text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input id="pwCurrent" type="password" placeholder="Current password" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+            <input id="pwNew" type="password" placeholder="New password (min 8)" autocomplete="new-password" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+            <input id="pwNew2" type="password" placeholder="Repeat new password" autocomplete="new-password" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+            <div id="pwError" class="hidden text-rose-600 font-semibold"></div>
+            <button type="submit" class="w-full bg-busy-blue text-white font-bold py-2 rounded-lg">Change password</button>
+            <div class="text-[10px] text-slate-500">Other devices signed in with this account will be signed out.</div>
+        </form>
+    </div>
+
+    <!-- Auth script (runs before the app; the app starts only after a successful login) -->
+    <script>
+        let authUser = null;
+        let authMode = 'login';
+        let authScreenOpen = false;
+        let authAllCompanies = [];
+
+        // Any API call that comes back 401 (session expired / revoked) brings back the login screen.
+        const _kanakkuFetch = window.fetch.bind(window);
+        window.fetch = async function (...args) {
+            const res = await _kanakkuFetch(...args);
+            const url = String(args[0] && args[0].url ? args[0].url : args[0]);
+            if (res.status === 401 && !url.includes('/api/auth/') && !authScreenOpen) {
+                showAuthScreen('login', 'Your session has ended. Please sign in again.');
+            }
+            return res;
+        };
+
+        function authEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function showAuthScreen(mode, message) {
+            authMode = mode;
+            authScreenOpen = true;
+            const el = document.getElementById('authScreen');
+            if (el) el.classList.remove('hidden');
+            const setup = mode === 'setup';
+            ['authDisplayNameRow', 'authConfirmRow', 'authSetupNote'].forEach(id => document.getElementById(id)?.classList.toggle('hidden', !setup));
+            const sub = document.getElementById('authSubtitle');
+            if (sub) sub.innerText = setup ? 'Create the administrator account' : 'Sign in to see your accounts';
+            const btn = document.getElementById('authSubmit');
+            if (btn) btn.innerText = setup ? 'Create admin & continue' : 'Sign in';
+            const pw = document.getElementById('authPassword');
+            if (pw) pw.setAttribute('autocomplete', setup ? 'new-password' : 'current-password');
+            setAuthError(message || '');
+            setTimeout(() => document.getElementById(setup ? 'authDisplayName' : 'authUsername')?.focus(), 50);
+        }
+
+        function hideAuthScreen() {
+            authScreenOpen = false;
+            document.getElementById('authScreen')?.classList.add('hidden');
+            ['authPassword', 'authPassword2'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+        }
+
+        function setAuthError(msg) {
+            const e = document.getElementById('authError');
+            if (!e) return;
+            e.innerText = msg || '';
+            e.classList.toggle('hidden', !msg);
+        }
+
+        async function submitAuthForm(ev) {
+            ev.preventDefault();
+            const username = (document.getElementById('authUsername')?.value || '').trim();
+            const password = document.getElementById('authPassword')?.value || '';
+            const body = { username, password };
+            if (authMode === 'setup') {
+                if (password !== (document.getElementById('authPassword2')?.value || '')) { setAuthError('Passwords do not match.'); return; }
+                body.display_name = (document.getElementById('authDisplayName')?.value || '').trim();
+            }
+            const btn = document.getElementById('authSubmit');
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(authMode === 'setup' ? '/api/auth/setup' : '/api/auth/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') { setAuthError(data.message || 'Sign in failed.'); return; }
+                const firstStart = !authUser;
+                authUser = data.user;
+                hideAuthScreen();
+                renderAccountCard();
+                if (firstStart || typeof init !== 'function') { if (typeof init === 'function') init(); }
+                else { location.reload(); }  // signed in again after expiry: reload to refresh everything
+            } catch (e) {
+                setAuthError('Cannot reach the server.');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function authGate() {
+            try {
+                const res = await fetch('/api/auth/status');
+                const st = await res.json();
+                if (st.setup_required) { showAuthScreen('setup'); return; }
+                if (!st.user) { showAuthScreen('login'); return; }
+                authUser = st.user;
+                renderAccountCard();
+                init();
+            } catch (e) {
+                showAuthScreen('login', 'Cannot reach the server.');
+            }
+        }
+
+        async function logout(everywhere) {
+            await fetch(everywhere ? '/api/auth/logout-all' : '/api/auth/logout', { method: 'POST' });
+            authUser = null;
+            location.reload();
+        }
+
+        function renderAccountCard() {
+            const el = document.getElementById('accountCard');
+            if (!el || !authUser) return;
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-slate-800">${authEsc(authUser.display_name || authUser.username)}</div>
+                        <div class="text-[10px] text-slate-500">${authEsc(authUser.username)} · ${authUser.role === 'admin' ? 'Admin' : 'User'}</div>
+                    </div>
+                    <button onclick="logout(false)" class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg font-bold">Sign out</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="openPasswordModal()" class="py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold">Change password</button>
+                    <button onclick="logout(true)" class="py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold">Sign out everywhere</button>
+                    ${authUser.role === 'admin' ? '<button onclick="openUsersModal()" class="col-span-2 py-1.5 bg-blue-50 text-busy-blue border border-blue-200 rounded-lg font-bold"><i class="fa-solid fa-users"></i> Users</button>' : ''}
+                </div>`;
+        }
+
+        // ---- change password ----
+        function openPasswordModal() { document.getElementById('passwordModal')?.classList.remove('hidden'); }
+        function closePasswordModal() {
+            document.getElementById('passwordModal')?.classList.add('hidden');
+            ['pwCurrent', 'pwNew', 'pwNew2'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+        }
+        async function submitPasswordChange(ev) {
+            ev.preventDefault();
+            const err = document.getElementById('pwError');
+            const show = m => { if (err) { err.innerText = m; err.classList.toggle('hidden', !m); } };
+            const cur = document.getElementById('pwCurrent')?.value || '';
+            const n1 = document.getElementById('pwNew')?.value || '';
+            if (n1 !== (document.getElementById('pwNew2')?.value || '')) { show('New passwords do not match.'); return; }
+            const res = await fetch('/api/auth/password', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password: cur, new_password: n1 }) });
+            const data = await res.json();
+            if (!res.ok) { show(data.message || 'Could not change password.'); return; }
+            show('');
+            closePasswordModal();
+            alert('Password changed.');
+        }
+
+        // ---- user management (admin) ----
+        let usersCache = [];
+        async function openUsersModal() {
+            document.getElementById('usersModal')?.classList.remove('hidden');
+            await loadUsers();
+            resetUserForm();
+        }
+        function closeUsersModal() { document.getElementById('usersModal')?.classList.add('hidden'); }
+        async function loadUsers() {
+            const res = await fetch('/api/users');
+            const data = await res.json();
+            usersCache = data.users || [];
+            authAllCompanies = data.companies || [];
+            const list = document.getElementById('usersList');
+            if (!list) return;
+            list.innerHTML = usersCache.map(u => `
+                <div class="p-2.5 bg-white border border-slate-200 rounded-lg flex justify-between items-center text-xs">
+                    <div>
+                        <div class="font-bold text-slate-800">${authEsc(u.display_name || u.username)} ${u.active ? '' : '<span class="text-rose-600">(disabled)</span>'}</div>
+                        <div class="text-[10px] text-slate-500">${authEsc(u.username)} · ${u.role === 'admin' ? 'Admin · all companies' : 'User · ' + authEsc((u.companies || []).join(', ') || 'no company')}</div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="editUser(${u.id})" class="px-2 py-1 bg-slate-50 border border-slate-200 rounded font-semibold">Edit</button>
+                        ${authUser && u.id !== authUser.id ? `<button onclick="deleteUser(${u.id})" class="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-semibold">Delete</button>` : ''}
+                    </div>
+                </div>`).join('');
+        }
+        function renderUserCompanyBoxes(selected) {
+            const box = document.getElementById('userFormCompanies');
+            if (!box) return;
+            const role = document.getElementById('userFormRole')?.value;
+            if (role === 'admin') { box.innerHTML = '<div class="text-[10px] text-slate-500">Admins can see every company.</div>'; return; }
+            const sel = selected || [...box.querySelectorAll('input:checked')].map(i => i.value);
+            const names = Object.fromEntries((typeof companies !== 'undefined' ? companies : []).map(c => [c.company_code, c.name]));
+            box.innerHTML = '<div class="font-semibold text-slate-600">Companies this user can see</div>' + authAllCompanies.map(c => `
+                <label class="flex items-center gap-2"><input type="checkbox" value="${authEsc(c)}" ${sel.includes(c) ? 'checked' : ''}> ${authEsc(names[c] || c)} <span class="text-slate-400">${authEsc(c)}</span></label>`).join('');
+        }
+        function resetUserForm() {
+            const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+            set('userFormId', ''); set('userFormUsername', ''); set('userFormName', ''); set('userFormPassword', ''); set('userFormRole', 'user');
+            const un = document.getElementById('userFormUsername'); if (un) un.disabled = false;
+            const act = document.getElementById('userFormActive'); if (act) act.checked = true;
+            const t = document.getElementById('userFormTitle'); if (t) t.innerText = 'Add user';
+            const pw = document.getElementById('userFormPassword'); if (pw) pw.placeholder = 'Password (min 8)';
+            renderUserCompanyBoxes([]);
+            const err = document.getElementById('userFormError'); if (err) err.classList.add('hidden');
+        }
+        function editUser(id) {
+            const u = usersCache.find(x => x.id === id);
+            if (!u) return;
+            const set = (eid, v) => { const e = document.getElementById(eid); if (e) e.value = v; };
+            set('userFormId', u.id); set('userFormUsername', u.username); set('userFormName', u.display_name || ''); set('userFormPassword', ''); set('userFormRole', u.role);
+            const un = document.getElementById('userFormUsername'); if (un) un.disabled = true;
+            const act = document.getElementById('userFormActive'); if (act) act.checked = !!u.active;
+            const t = document.getElementById('userFormTitle'); if (t) t.innerText = `Edit ${u.username}`;
+            const pw = document.getElementById('userFormPassword'); if (pw) pw.placeholder = 'New password (leave empty to keep)';
+            renderUserCompanyBoxes(u.companies || []);
+        }
+        async function saveUserForm(ev) {
+            ev.preventDefault();
+            const id = document.getElementById('userFormId')?.value;
+            const body = {
+                username: (document.getElementById('userFormUsername')?.value || '').trim(),
+                display_name: (document.getElementById('userFormName')?.value || '').trim(),
+                role: document.getElementById('userFormRole')?.value || 'user',
+                active: !!document.getElementById('userFormActive')?.checked,
+                companies: [...document.querySelectorAll('#userFormCompanies input:checked')].map(i => i.value)
+            };
+            const pw = document.getElementById('userFormPassword')?.value || '';
+            if (pw) body.password = pw;
+            if (id) body.id = parseInt(id, 10);
+            const res = await fetch('/api/users/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await res.json();
+            const err = document.getElementById('userFormError');
+            if (!res.ok) { if (err) { err.innerText = data.message || 'Could not save.'; err.classList.remove('hidden'); } return; }
+            await loadUsers();
+            resetUserForm();
+        }
+        async function deleteUser(id) {
+            const u = usersCache.find(x => x.id === id);
+            if (!u || !confirm(`Delete user ${u.username}? This cannot be undone.`)) return;
+            const res = await fetch('/api/users/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+            const data = await res.json();
+            if (!res.ok) { alert(data.message || 'Could not delete.'); return; }
+            await loadUsers();
+        }
+    </script>
+
     <!-- Application Script -->
     <script>
         let currentCompany = localStorage.getItem('busy_selected_company') || '';
@@ -2760,6 +3068,8 @@
                 if (mMob) mMob.innerText = `Mobile: ${comp.mobile || 'N/A'}`;
                 const mEmail = document.getElementById('more-email');
                 if (mEmail) mEmail.innerText = `Email: ${comp.email || 'N/A'}`;
+                const mSync = document.getElementById('more-last-sync');
+                if (mSync) mSync.innerText = comp.last_synced_at || '-';
             }
             loadMasterFilters();
             loadDashboard();
@@ -5042,12 +5352,12 @@
             }
         });
 
+        // Start: check the session first; the app (init) runs only after setup / login succeeds.
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
+            document.addEventListener('DOMContentLoaded', authGate);
         } else {
-            init();
+            authGate();
         }
-        window.addEventListener('load', () => { if (!companies || companies.length === 0) init(); });
     </script>
 <!-- REPORTS:accounts:SCRIPT:BEGIN -->
 <script>window.EXTRA_REPORT_VIEWS = (window.EXTRA_REPORT_VIEWS || []).concat(['view-accounts-cashbook', 'view-accounts-bankbook', 'view-accounts-daily', 'view-accounts-monthly', 'view-accounts-register']);</script>

@@ -1,0 +1,7 @@
+{
+  "bds_root": "C:\\BusyWin\\DATA",
+  "companies": ["COMP0001"],
+  "mssql": null,
+  "port": 3000,
+  "auto_sync_minutes": 10
+}

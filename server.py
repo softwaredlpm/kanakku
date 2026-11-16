@@ -4,10 +4,12 @@ import hmac
 import http.server
 import json
 import os
+import sys
 import sqlite3
 import urllib.parse
 from datetime import datetime
 import importlib
+import auth
 import voucher_renderers
 
 # BUSY "Display" report modules (reports_*.py). Each exports ROUTES = {path: handler(conn, company, fy, params) -> dict}.
@@ -114,8 +116,9 @@ def report_default_week(conn, company, fy):
     return (end - timedelta(days=6)).strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
 PORT = 3000
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "busy_local.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))           # code + bundled files (web UI, exporter)
+DATA_DIR = os.environ.get('KANAKKU_HOME') or BASE_DIR            # database, config, secret (Kanakku.exe: %LOCALAPPDATA%\Kanakku)
+DB_PATH = os.path.join(DATA_DIR, "busy_local.db")
 WEB_DIR = os.path.join(BASE_DIR, "BusyMobileWeb")
 
 def _load_app_secret():
@@ -124,7 +127,7 @@ def _load_app_secret():
     env = os.environ.get('APP_SECRET', '').strip()
     if env:
         return env.encode('utf-8')
-    path = os.path.join(BASE_DIR, '.app_secret')
+    path = os.path.join(DATA_DIR, '.app_secret')
     try:
         with open(path, encoding='utf-8') as fh:
             val = fh.read().strip()
@@ -310,6 +313,7 @@ def ensure_extra_tables(conn):
     global _EXTRA_TABLES_READY
     if _EXTRA_TABLES_READY:
         return
+    auth.ensure_schema(conn)
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS busy_item_ext (
             company_code TEXT NOT NULL, fy_year INTEGER NOT NULL,
@@ -516,18 +520,88 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(html.encode('utf-8'))
 
     def end_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        # Same-origin app: no CORS. Basic hardening headers.
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Referrer-Policy', 'same-origin')
+        self.send_header('X-Frame-Options', 'SAMEORIGIN')
+        for h in getattr(self, '_extra_headers', []):
+            self.send_header(*h)
+        self._extra_headers = []
         super().end_headers()
 
     def do_OPTIONS(self):
-        self.send_response(200)
+        self.send_response(204)
         self.end_headers()
 
+    # ---------- auth helpers ----------
+    def read_body(self):
+        if not hasattr(self, '_body_cache'):
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            if n > 5_000_000:
+                raise ValueError('Request too large')
+            self._body_cache = self.rfile.read(n) if n > 0 else b''
+        return self._body_cache
+
+    def json_body(self):
+        raw = self.read_body()
+        try:
+            data = json.loads(raw.decode('utf-8')) if raw else {}
+        except (ValueError, UnicodeDecodeError):
+            data = {}
+        return data if isinstance(data, dict) else {}
+
+    def is_https(self):
+        return (self.headers.get('X-Forwarded-Proto') or '').lower() == 'https'
+
+    def client_ip(self):
+        fwd = self.headers.get('X-Forwarded-For') or ''
+        return fwd.split(',')[0].strip() or self.client_address[0]
+
+    def current_user(self):
+        if not hasattr(self, '_user_cache'):
+            token = ''
+            for part in (self.headers.get('Cookie') or '').split(';'):
+                k, _, v = part.strip().partition('=')
+                if k == auth.COOKIE_NAME:
+                    token = v
+            conn = self.get_db()
+            try:
+                self._user_cache = auth.read_session(conn, SECURITY_SALT, token)
+            finally:
+                conn.close()
+        return self._user_cache
+
+    def allowed_companies(self, user):
+        conn = self.get_db()
+        try:
+            all_codes = [r[0] for r in conn.execute('SELECT company_code FROM busy_company ORDER BY company_code')]
+        finally:
+            conn.close()
+        return all_codes if user['role'] == 'admin' else [c for c in all_codes if c in (user.get('companies') or [])]
+
+    def same_origin_ok(self):
+        """Reject cross-site POSTs (in addition to the SameSite cookie)."""
+        origin = self.headers.get('Origin')
+        if not origin:
+            return True
+        return urllib.parse.urlparse(origin).netloc == (self.headers.get('Host') or '')
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        if not self.same_origin_ok():
+            self.send_json({"status": "error", "message": "Cross-site request blocked"}, code=403)
+            return
+        if parsed.path.startswith('/api/auth/') or parsed.path.startswith('/api/users/'):
+            self.handle_auth_post(parsed.path)
+            return
+        user = self.current_user()
+        if not user:
+            self.send_json({"status": "error", "message": "Login required", "login_required": True}, code=401)
+            return
+        body_company = self.json_body().get('company') or ''
+        if body_company and not auth.can_access_company(user, body_company):
+            self.send_json({"status": "error", "message": "No access to this company"}, code=403)
+            return
         if parsed.path == '/api/voucher/save':
             self.handle_save_voucher()
         elif parsed.path == '/api/party/save':
@@ -535,13 +609,87 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path == '/api/item/save':
             self.handle_save_item()
         else:
-            self.send_response(200)
-            self.end_headers()
+            self.send_json({"status": "error", "message": "Not found"}, code=404)
+
+    def handle_auth_post(self, path):
+        body = self.json_body()
+        conn = self.get_db()
+        try:
+            if path == '/api/auth/setup':
+                # first admin only, while no user exists
+                if auth.user_count(conn) > 0:
+                    raise auth.AuthError('Setup is already done. Please log in.', 403)
+                u = auth.create_user(conn, (body.get('username') or '').strip(), body.get('password') or '',
+                                     role='admin', display_name=(body.get('display_name') or '').strip())
+                self._login_response(u)
+                return
+            if path == '/api/auth/login':
+                username = (body.get('username') or '').strip()
+                key = f'{self.client_ip()}|{username.lower()}'
+                auth.throttle_check(key)
+                try:
+                    u = auth.authenticate(conn, username, body.get('password') or '')
+                except auth.AuthError:
+                    auth.throttle_fail(key)
+                    raise
+                auth.throttle_reset(key)
+                self._login_response(u)
+                return
+            if path == '/api/auth/logout':
+                self._extra_headers = [('Set-Cookie', auth.clear_cookie_header(self.is_https()))]
+                self.send_json({"status": "success"})
+                return
+            user = self.current_user()
+            if not user:
+                raise auth.AuthError('Login required', 401)
+            if path == '/api/auth/password':
+                if not auth.verify_password(body.get('current_password') or '', user['pass_hash']):
+                    raise auth.AuthError('Current password is wrong.', 403)
+                u = auth.update_user(conn, user['id'], password=body.get('new_password') or '')
+                self._login_response(u)  # other devices are logged out; this one gets a fresh session
+                return
+            if path == '/api/auth/logout-all':
+                auth.revoke_sessions(conn, user['id'])
+                self._extra_headers = [('Set-Cookie', auth.clear_cookie_header(self.is_https()))]
+                self.send_json({"status": "success"})
+                return
+            # ---- admin only ----
+            if user['role'] != 'admin':
+                raise auth.AuthError('Admin only.', 403)
+            if path == '/api/users/save':
+                companies = body.get('companies')
+                if companies is not None and not (isinstance(companies, list) and all(isinstance(c, str) for c in companies)):
+                    raise auth.AuthError('companies must be a list of company codes.')
+                if body.get('id'):
+                    u = auth.update_user(conn, int(body['id']), role=body.get('role'), companies=companies,
+                                         active=body.get('active'), display_name=body.get('display_name'),
+                                         password=body.get('password') or None)
+                else:
+                    u = auth.create_user(conn, (body.get('username') or '').strip(), body.get('password') or '',
+                                         role=body.get('role') or 'user', companies=companies or [],
+                                         display_name=(body.get('display_name') or '').strip())
+                self.send_json({"status": "success", "user": auth.public_user(u)})
+                return
+            if path == '/api/users/delete':
+                if int(body.get('id') or 0) == user['id']:
+                    raise auth.AuthError('You cannot delete your own account.')
+                auth.delete_user(conn, int(body.get('id') or 0))
+                self.send_json({"status": "success"})
+                return
+            raise auth.AuthError('Not found', 404)
+        except auth.AuthError as e:
+            self.send_json({"status": "error", "message": str(e)}, code=e.status)
+        finally:
+            conn.close()
+
+    def _login_response(self, u):
+        token = auth.make_session(SECURITY_SALT, u)
+        self._extra_headers = [('Set-Cookie', auth.cookie_header(token, self.is_https()))]
+        self.send_json({"status": "success", "user": auth.public_user(u)})
 
     def handle_save_party(self):
         try:
-            content_len = int(self.headers.get('Content-Length', 0))
-            raw_body = self.rfile.read(content_len)
+            raw_body = self.read_body()
             body = json.loads(raw_body.decode('utf-8'))
 
             company = body.get('company') or self.default_company()
@@ -581,8 +729,7 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
 
     def handle_save_item(self):
         try:
-            content_len = int(self.headers.get('Content-Length', 0))
-            raw_body = self.rfile.read(content_len)
+            raw_body = self.read_body()
             body = json.loads(raw_body.decode('utf-8'))
 
             company = body.get('company') or self.default_company()
@@ -614,8 +761,7 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
 
     def handle_save_voucher(self):
         try:
-            content_len = int(self.headers.get('Content-Length', 0))
-            raw_body = self.rfile.read(content_len)
+            raw_body = self.read_body()
             body = json.loads(raw_body.decode('utf-8'))
             
             company = body.get('company') or self.default_company()
@@ -727,11 +873,53 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
                 "message": str(e)
             }, code=500)
 
+    # Signed-token PDF links (shared on WhatsApp) open without a login: the HMAC token itself is the permission.
+    TOKEN_PUBLIC_PATHS = ('/api/voucher/invoice-pdf', '/api/share/')
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
 
-        company = params.get('company', [''])[0] or self.default_company()
+        if parsed.path == '/api/auth/status':
+            _c = self.get_db()
+            try:
+                setup_required = auth.user_count(_c) == 0
+            finally:
+                _c.close()
+            u = None if setup_required else self.current_user()
+            self.send_json({"setup_required": setup_required, "user": auth.public_user(u),
+                            "companies": self.allowed_companies(u) if u else []})
+            return
+
+        user = None
+        if parsed.path.startswith('/api/') and not parsed.path.startswith(self.TOKEN_PUBLIC_PATHS):
+            user = self.current_user()
+            if not user:
+                self.send_json({"status": "error", "message": "Login required", "login_required": True}, code=401)
+                return
+            req_company = params.get('company', [''])[0]
+            if req_company and not auth.can_access_company(user, req_company):
+                self.send_json({"status": "error", "message": "No access to this company"}, code=403)
+                return
+            if parsed.path == '/api/users':
+                if user['role'] != 'admin':
+                    self.send_json({"status": "error", "message": "Admin only."}, code=403)
+                    return
+                _c = self.get_db()
+                try:
+                    self.send_json({"users": auth.list_users(_c), "companies": self.allowed_companies(user)})
+                finally:
+                    _c.close()
+                return
+            if parsed.path in ('/api/sync/run',) and user['role'] != 'admin':
+                self.send_json({"status": "error", "message": "Admin only."}, code=403)
+                return
+
+        if user:
+            allowed = self.allowed_companies(user)
+            company = params.get('company', [''])[0] or (allowed[0] if allowed else '')
+        else:
+            company = params.get('company', [''])[0] or self.default_company()
         try:
             fy = int(params.get('fy', [''])[0])
         except ValueError:
@@ -745,7 +933,7 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
                 _c.close()
 
         if parsed.path == '/api/companies':
-            self.handle_companies()
+            self.handle_companies(self.allowed_companies(user) if user else [])
         elif parsed.path == '/api/fys':
             # financial years synced for this company, newest first
             _c = self.get_db()
@@ -1067,11 +1255,11 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode('utf-8'))
 
-    def handle_companies(self):
+    def handle_companies(self, allowed):
         conn = self.get_db()
         c = conn.cursor()
         c.execute('SELECT company_code, name, print_name, gstin, bdep_id, mobile, email, last_synced_at FROM busy_company ORDER BY company_code')
-        rows = [dict(r) for r in c.fetchall()]
+        rows = [dict(r) for r in c.fetchall() if r['company_code'] in allowed]
         conn.close()
         self.send_json(rows)
 
@@ -5101,19 +5289,34 @@ class BusyApiHandler(http.server.SimpleHTTPRequestHandler):
 </div></body></html>'''
         self.send_html(html)
 
+class KanakkuHTTPServer(http.server.ThreadingHTTPServer):
+    # The stdlib default (SO_REUSEADDR) lets a second process bind the same port on Windows and silently share
+    # requests with the first. Bind exclusively so "port already in use" is detected.
+    allow_reuse_address = False
+
+    def server_bind(self):
+        import socket
+        if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def make_server(port, host='0.0.0.0'):
+    """Bound HTTP server for the app (raises OSError if the port is busy). Used by __main__ and Kanakku.exe."""
+    import functools
+    handler = functools.partial(BusyApiHandler, directory=WEB_DIR)
+    return KanakkuHTTPServer((host, port), handler)
+
+
 if __name__ == '__main__':
     os.chdir(WEB_DIR)
-
-    def run_server(port):
-        try:
-            s = http.server.ThreadingHTTPServer(('0.0.0.0', port), BusyApiHandler)
-            print(f"Kanakku server listening at http://0.0.0.0:{port}")
-            s.serve_forever()
-        except Exception as e:
-            print(f"Error on port {port}: {e}")
-
+    port = int(os.environ.get('PORT', '3000'))
+    try:
+        srv = make_server(port)
+    except OSError as e:
+        sys.exit(f"Error on port {port}: {e}")
     # Keep busy_local.db in step with BUSY (all year files of the configured companies)
     auto_sync_loop()
-
     # Browser / phone on the same network: http://<this-computer>:PORT (default 3000)
-    run_server(int(os.environ.get('PORT', '3000')))
+    print(f"Kanakku server listening at http://0.0.0.0:{port}")
+    srv.serve_forever()

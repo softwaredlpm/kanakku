@@ -1,26 +1,51 @@
-# Read-only export of BUSY BDS tables to tab-separated files, used by bds_sync.py.
-#   -Bds        full path of a BUSY .bds file (db.bds or db1YYYY.bds)
+# Read-only export of BUSY tables to tab-separated files, used by bds_sync.py.
+# Source, one of:
+#   -Bds <path>                          BUSY BDS (MS Access) file: db.bds or db1YYYY.bds
+#   -SqlServer <server> -SqlDatabase <db> BUSY SQL edition database (e.g. BusyComp0001_db12025)
+#        -SqlAuth windows|sql  -SqlUser <login>  (SQL password: $env:KANAKKU_SQL_PWD or DPAPI file sql_password.dat)
 #   -QueryFile  JSON: [{"name": "tran1", "sql": ["SELECT ...", "fallback SELECT ..."]}, ...]
 #   -OutDir     folder for <name>.tsv (or <name>.err when every variant failed)
-# Password: $env:BUSY_BDS_PWD, else the DPAPI-protected file written by set_bds_password.ps1.
+# BDS password: $env:BUSY_BDS_PWD, else the DPAPI-protected bds_password.dat written by set_bds_password.ps1.
 # Values: NULL -> \N, dates -> yyyy-MM-dd HH:mm:ss, booleans -> 0/1, tabs/newlines inside text -> space.
-param([Parameter(Mandatory)][string]$Bds, [Parameter(Mandatory)][string]$QueryFile, [Parameter(Mandatory)][string]$OutDir)
+param([string]$Bds, [string]$SqlServer, [string]$SqlDatabase, [string]$SqlAuth = 'windows', [string]$SqlUser = '',
+      [Parameter(Mandatory)][string]$QueryFile, [Parameter(Mandatory)][string]$OutDir)
 $ErrorActionPreference = 'Stop'
 
-$pwdPlain = $env:BUSY_BDS_PWD
-if (-not $pwdPlain) {
-    $pwdFile = Join-Path $env:LOCALAPPDATA 'BusyMobileApp\bds_password.dat'
-    if (-not (Test-Path $pwdFile)) { throw "No BDS password: run set_bds_password.ps1 once (or set BUSY_BDS_PWD)." }
-    $secure = (Get-Content $pwdFile -Raw).Trim() | ConvertTo-SecureString
+function Read-Secret([string]$envName, [string]$fileName, [string]$hint) {
+    $val = [Environment]::GetEnvironmentVariable($envName)
+    if ($val) { return $val }
+    $f = Join-Path $env:LOCALAPPDATA "BusyMobileApp\$fileName"
+    if (-not (Test-Path $f)) { throw "No password: $hint" }
+    $secure = (Get-Content $f -Raw).Trim() | ConvertTo-SecureString
     $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-    try { $pwdPlain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
 }
-$pwdEsc = $pwdPlain.Replace('}', '}}')
+
+function Get-SqlDriver {
+    $names = (Get-OdbcDriver -Platform '64-bit' -ErrorAction SilentlyContinue).Name
+    foreach ($d in 'ODBC Driver 18 for SQL Server', 'ODBC Driver 17 for SQL Server', 'SQL Server') { if ($names -contains $d) { return $d } }
+    throw 'No SQL Server ODBC driver installed (install "ODBC Driver 18 for SQL Server").'
+}
+
+if ($Bds) {
+    $pwdEsc = (Read-Secret 'BUSY_BDS_PWD' 'bds_password.dat' 'run set_bds_password.ps1 once (or set BUSY_BDS_PWD).').Replace('}', '}}')
+    $connStr = "Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=$Bds;Pwd=$pwdEsc;ReadOnly=1;"
+} elseif ($SqlServer -and $SqlDatabase) {
+    $auth = 'Trusted_Connection=Yes;'
+    if ($SqlAuth -eq 'sql') {
+        $p = (Read-Secret 'KANAKKU_SQL_PWD' 'sql_password.dat' 'run set_bds_password.ps1 -Kind sql once (or set KANAKKU_SQL_PWD).').Replace('}', '}}')
+        $auth = "Uid=$SqlUser;Pwd={$p};"
+    }
+    $connStr = "Driver={$(Get-SqlDriver)};Server=$SqlServer;Database=$SqlDatabase;${auth}ApplicationIntent=ReadOnly;Encrypt=Optional;TrustServerCertificate=Yes;Connection Timeout=15;"
+} else {
+    throw 'Give -Bds <file> or -SqlServer <server> -SqlDatabase <db>.'
+}
+
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $inv = [Globalization.CultureInfo]::InvariantCulture
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
-$conn = New-Object System.Data.Odbc.OdbcConnection("Driver={Microsoft Access Driver (*.mdb, *.accdb)};Dbq=$Bds;Pwd=$pwdEsc;ReadOnly=1;")
+$conn = New-Object System.Data.Odbc.OdbcConnection($connStr)
 $conn.Open()
 try {
     foreach ($q in (Get-Content $QueryFile -Raw | ConvertFrom-Json)) {

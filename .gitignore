@@ -31,6 +31,9 @@ BusyMobileWeb/*.apk
 BusyLocalSync/
 
 # ---- Local dev / build noise ----
+build/
+dist/
+*.spec
 __pycache__/
 *.pyc
 *.exe
@@ -47,5 +50,9 @@ scratch/*
 !scratch/validate_syntax.js
 !scratch/test_all_home_buttons.js
 !scratch/test_reports_*.py
+!scratch/test_auth.py
 !scratch/compare_sync_db.py
 !scratch/print_dash_values.py
+
+# Machine-specific sync settings (copy bds_sync_config.example.json)
+bds_sync_config.json
